@@ -31,6 +31,34 @@ if app.config.get('DEBUG'):
     )
     app.logger.debug('Debug mode enabled')
 
+# Custom Jinja2 filters
+@app.template_filter('format_datetime')
+def format_datetime(value, format='%Y-%m-%d %H:%M'):
+    """Format a datetime string or object"""
+    if value is None:
+        return 'Unknown'
+    
+    # If it's already a datetime object
+    if isinstance(value, datetime):
+        return value.strftime(format)
+    
+    # If it's a string, try to parse it
+    if isinstance(value, str):
+        try:
+            # Try parsing SQLite datetime format
+            dt = datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+            return dt.strftime(format)
+        except ValueError:
+            try:
+                # Try alternative format
+                dt = datetime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
+                return dt.strftime(format)
+            except ValueError:
+                # If parsing fails, return the original string
+                return value
+    
+    return str(value)
+
 # Import route blueprints
 from routes.auth import auth_bp
 from routes.user import user_bp

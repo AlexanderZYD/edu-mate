@@ -99,7 +99,7 @@
                             <h6 class="alert-heading">Current Content Info</h6>
                             <div class="row">
                                 <div class="col-md-6">
-                                    <small class="text-muted">Created: {{ content.created_at if content.created_at else 'Unknown' }}</small>
+                                    <small class="text-muted">Created: {{ content.created_at|format_datetime }}</small>
                                 </div>
                                 <div class="col-md-6">
                                     <small class="text-muted">Views: {{ content.view_count or 0 }}</small>

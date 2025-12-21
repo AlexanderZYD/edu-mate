@@ -108,7 +108,7 @@
                                     <span class="badge badge-warning">Draft</span>
                                 {% endif %}
                             </td>
-                            <td>{{ content.created_at if content.created_at else 'N/A' }}</td>
+                            <td>{{ content.created_at|format_datetime('%Y-%m-%d') }}</td>
                             <td>
                                 <a href="{{ url_for('admin.toggle_content', content_id=content.id) }}" 
                                    class="btn btn-{% if content.is_published %}warning{% else %}success{% endif %} btn-sm"

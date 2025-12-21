@@ -231,7 +231,7 @@
                         <div class="mt-2">
                             <small class="text-muted">
                                 <i class="fas fa-user"></i> {{ item.uploader_name or 'Unknown' }} 
-                                • {{ item.created_at if item.created_at else 'Unknown date' }}
+                                • {{ item.created_at|format_datetime('%Y-%m-%d') }}
                             </small>
                         </div>
                     </div>

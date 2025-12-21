@@ -270,23 +270,37 @@ def view(content_id):
         
         user_feedback = cursor.fetchone()
         
-        # Get all feedback for this content
+        # Get all feedback for this content with pagination support
         cursor.execute("""
             SELECT 
-                cf.rating, cf.comment, cf.created_at,
-                COALESCE(u.full_name, u.username) as user_name
+                cf.rating, cf.comment, cf.created_at, cf.updated_at,
+                COALESCE(u.full_name, u.username) as user_name,
+                u.id as user_id
             FROM content_feedback cf
             JOIN users u ON cf.user_id = u.id
             WHERE cf.content_id = ?
             ORDER BY cf.created_at DESC
-            LIMIT 10
         """, (content_id,))
         
         feedback_list = cursor.fetchall()
         
+        # Get feedback statistics
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_count,
+                AVG(rating) as avg_rating,
+                COUNT(CASE WHEN rating = 5 THEN 1 END) as five_star,
+                COUNT(CASE WHEN rating = 4 THEN 1 END) as four_star,
+                COUNT(CASE WHEN rating = 3 THEN 1 END) as three_star,
+                COUNT(CASE WHEN rating = 2 THEN 1 END) as two_star,
+                COUNT(CASE WHEN rating = 1 THEN 1 END) as one_star
+            FROM content_feedback 
+            WHERE content_id = ?
+        """, (content_id,))
+        feedback_stats = cursor.fetchone()
+        
         # Get feedback count
-        cursor.execute("SELECT COUNT(*) as count FROM content_feedback WHERE content_id = ?", (content_id,))
-        feedback_count = cursor.fetchone()['count']
+        feedback_count = feedback_stats['total_count'] if feedback_stats else 0
         
         # Get related content (same category) - SQLite uses RANDOM() instead of RAND()
         cursor.execute("""
@@ -325,6 +339,7 @@ def view(content_id):
                              user_feedback=user_feedback,
                              feedback_list=feedback_list,
                              feedback_count=feedback_count,
+                             feedback_stats=feedback_stats,
                              related_content=related_content,
                              uploader_name=uploader_name,
                              user_activity=user_activity)
