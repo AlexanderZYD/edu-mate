@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile - EduMate{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-user-circle fa-5x text-primary"></i>
+                    </div>
+                    <h4 class="card-title">{{ user.full_name or user.username }}</h4>
+                    <p class="text-muted">{{ user.role|title }}</p>
+                    <p class="small">{{ user.email }}</p>
+                    <div class="mb-2">
+                        <small class="text-muted">ID Number:</small>
+                        <div>
+                            <span class="badge bg-secondary">{{ user.id_number }}</span>
+                        </div>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('user.edit_profile') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-edit"></i> Edit Profile
+                        </a>
+                        <a href="{{ url_for('user.settings') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-cog"></i> Settings
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <!-- Learning Statistics -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Learning Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 text-center">
+                            <h4 class="text-primary">{{ stats.content_viewed or 0 }}</h4>
+                            <p class="small text-muted">Content Viewed</p>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <h4 class="text-success">{{ stats.total_activities or 0 }}</h4>
+                            <p class="small text-muted">Total Activities</p>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <h4 class="text-info">{{ (stats.total_time_spent or 0) // 60 }}h</h4>
+                            <p class="small text-muted">Learning Time</p>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <h4 class="text-warning">{{ "%.1f"|format(stats.avg_rating_given or 0) }}</h4>
+                            <p class="small text-muted">Average Rating</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Activities -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Recent Activities</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_activities %}
+                        <div class="list-group list-group-flush">
+                            {% for activity in recent_activities %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ activity.title }}</h6>
+                                    <small class="text-muted">
+                                        <i class="fas fa-{{ 'video' if activity.type == 'video' else 'book' if activity.type == 'article' else 'file' }}"></i>
+                                        {{ activity.type|title }} · {{ activity.activity_type|title }}
+                                    </small>
+                                </div>
+                                <small class="text-muted">{{ activity.created_at[:16] if activity.created_at else '' }}</small>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No learning activities yet</p>
+                            <a href="{{ url_for('content.browse') }}" class="btn btn-primary">
+                                <i class="fas fa-search"></i> Explore Content
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+.chart-container {
+    position: relative;
+    height: 400px;
+    margin-bottom: 20px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">System Analytics</h1>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    {% if analytics_data %}
+    <!-- Daily Activity Chart -->
+    <div class="row">
+        <div class="col-xl-12 col-lg-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Daily Activity (Last 30 Days)</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="dailyActivityChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Performance & Category Distribution -->
+    <div class="row">
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Content Performance by Type</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="contentPerformanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Category Distribution</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="categoryDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Engagement -->
+    <div class="row">
+        <div class="col-xl-12 col-lg-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">User Engagement by Role</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="userEngagementChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Statistics -->
+    <div class="row">
+        <div class="col-xl-12 col-lg-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Summary Statistics</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 mb-0 text-gray-800">{{ analytics_data.daily_activity|length }}</div>
+                                <div class="small text-gray-500">Days with Activity</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 mb-0 text-gray-800">{{ analytics_data.content_performance|length }}</div>
+                                <div class="small text-gray-500">Content Types</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 mb-0 text-gray-800">{{ analytics_data.category_distribution|length }}</div>
+                                <div class="small text-gray-500">Categories with Content</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h4 mb-0 text-gray-800">{{ analytics_data.user_engagement|length }}</div>
+                                <div class="small text-gray-500">User Roles Tracked</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- No Data Available -->
+    <div class="text-center">
+        <div class="error mx-auto" data-text="404">404</div>
+        <p class="lead text-gray-800 mb-5">No Analytics Data Available</p>
+        <p class="text-gray-500 mb-0">It looks like there's no activity data to analyze yet.</p>
+        <a href="{{ url_for('admin.dashboard') }}">&larr; Back to Dashboard</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+{% if analytics_data %}
+// Daily Activity Chart
+const dailyActivityCtx = document.getElementById('dailyActivityChart').getContext('2d');
+const dailyActivityChart = new Chart(dailyActivityCtx, {
+    type: 'line',
+    data: {
+        labels: {{ analytics_data.daily_activity|map(attribute='activity_date')|list|tojson }},
+        datasets: [{
+            label: 'Active Users',
+            data: {{ analytics_data.daily_activity|map(attribute='active_users')|list|tojson }},
+            borderColor: 'rgb(75, 192, 192)',
+            tension: 0.1
+        }, {
+            label: 'Total Activities',
+            data: {{ analytics_data.daily_activity|map(attribute='total_activities')|list|tojson }},
+            borderColor: 'rgb(255, 99, 132)',
+            tension: 0.1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// Content Performance Chart
+const contentPerformanceCtx = document.getElementById('contentPerformanceChart').getContext('2d');
+const contentPerformanceChart = new Chart(contentPerformanceCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ analytics_data.content_performance|map(attribute='type')|list|tojson }},
+        datasets: [{
+            label: 'Content Count',
+            data: {{ analytics_data.content_performance|map(attribute='content_count')|list|tojson }},
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// Category Distribution Chart
+const categoryDistributionCtx = document.getElementById('categoryDistributionChart').getContext('2d');
+const categoryDistributionChart = new Chart(categoryDistributionCtx, {
+    type: 'doughnut',
+    data: {
+        labels: {{ analytics_data.category_distribution|map(attribute='name')|list|tojson }},
+        datasets: [{
+            data: {{ analytics_data.category_distribution|map(attribute='content_count')|list|tojson }},
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.2)',
+                'rgba(54, 162, 235, 0.2)',
+                'rgba(255, 205, 86, 0.2)',
+                'rgba(75, 192, 192, 0.2)',
+                'rgba(153, 102, 255, 0.2)'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+
+// User Engagement Chart
+const userEngagementCtx = document.getElementById('userEngagementChart').getContext('2d');
+const userEngagementChart = new Chart(userEngagementCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ analytics_data.user_engagement|map(attribute='role')|list|tojson }},
+        datasets: [{
+            label: 'Engaged Users',
+            data: {{ analytics_data.user_engagement|map(attribute='engaged_users')|list|tojson }},
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+        }, {
+            label: 'Avg Time Spent (min)',
+            data: {{ analytics_data.user_engagement|map(attribute='avg_time_spent')|list|tojson }},
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            borderColor: 'rgba(255, 99, 132, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}EduMate - Your Personalized Learning Companion{% endblock %}
+{% block content %}
+<div class="hero-section bg-gradient text-white py-3 mb-3">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                {% if session.user_id %}
+                <h1 class="display-5 fw-bold mb-3 gradient-text">Welcome back, {{ user.full_name or user.username }}!</h1>
+                <p class="lead mb-3">Continue your personalized learning journey. Discover new content tailored to your interests and track your progress.</p>
+                <div class="d-flex gap-3">
+                    <a href="{{ url_for('content.browse') }}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-search me-2"></i>Browse Content
+                    </a>
+                </div>
+            {% else %}
+                <h1 class="display-5 fw-bold mb-3 gradient-text">Welcome to EduMate</h1>
+                <p class="lead mb-3">Your personalized learning companion that adapts to your unique learning style and pace. Discover tailored content, track your progress, and achieve your educational goals.</p>
+                <div class="d-flex gap-3">
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-warning btn-lg">
+                        <i class="fas fa-user-plus me-2"></i>Get Started
+                    </a>
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-outline-warning btn-lg">
+                        <i class="fas fa-sign-in-alt me-2"></i>Login
+                    </a>
+                </div>
+            {% endif %}
+            </div>
+            <div class="col-lg-6">
+                <div class="text-center">
+                    <i class="fas fa-graduation-cap display-1 opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Featured Content for Logged-in Users -->
+{% if session.user_id and featured_content %}
+<section class="featured-section">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <h3 class="gradient-text"><i class="fas fa-star text-warning me-2"></i>Recommended for You</h3>
+                <p class="text-muted mb-4">Based on your interests and learning history</p>
+                <div class="row g-4">
+                    {% for content in featured_content %}
+                    <div class="col-md-4">
+                        <div class="card h-100 featured-content-card enhanced-card">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <span class="badge bg-{{ 'primary' if content.type == 'article' else 'success' if content.type == 'video' else 'info' }} me-2">
+                                        <i class="fas fa-{{ 'file-alt' if content.type == 'article' else 'video' if content.type == 'video' else 'book' }} me-1"></i>
+                                        {{ content.type|title }}
+                                    </span>
+                                    <span class="badge bg-secondary">{{ content.difficulty_level|title }}</span>
+                                </div>
+                                <h6 class="card-title">{{ content.title }}</h6>
+                                <p class="card-text text-muted small">Click to explore this {{ content.type }} and enhance your learning journey.</p>
+                                <div class="text-end mt-3">
+                                    <a href="{{ url_for('content.view', content_id=content.id) }}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-play me-1"></i>Start Learning
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<div class="container">
+    <!-- Features Section -->
+    {% if not session.user_id %}
+    <div class="row mb-4">
+        <div class="col-lg-12 text-center mb-3">
+            <h2 class="fw-bold">Why Choose EduMate?</h2>
+            <p class="text-muted">Experience the future of personalized learning</p>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="card h-100 enhanced-card">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-brain text-primary mb-3" style="font-size: 2.5rem;"></i>
+                    <h5 class="card-title">Smart Recommendations</h5>
+                    <p class="card-text">Our intelligent algorithm analyzes your learning patterns and suggests content that matches your interests and skill level.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card h-100 enhanced-card">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-chart-line text-success mb-3" style="font-size: 2.5rem;"></i>
+                    <h5 class="card-title">Progress Tracking</h5>
+                    <p class="card-text">Monitor your learning journey with detailed analytics and visualizations that help you stay motivated.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card h-100 enhanced-card">
+                <div class="card-body text-center p-4">
+                    <i class="fas fa-comments text-info mb-3" style="font-size: 2.5rem;"></i>
+                    <h5 class="card-title">Interactive Feedback</h5>
+                    <p class="card-text">Rate and review content to help us improve recommendations and build a better learning community.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Section -->
+    <div class="row bg-light p-4 rounded mb-5">
+        <div class="col-md-3 text-center mb-3">
+            <h3 class="text-primary fw-bold">500+</h3>
+            <p class="text-muted">Learning Resources</p>
+        </div>
+        <div class="col-md-3 text-center mb-3">
+            <h3 class="text-success fw-bold">50+</h3>
+            <p class="text-muted">Expert Instructors</p>
+        </div>
+        <div class="col-md-3 text-center mb-3">
+            <h3 class="text-info fw-bold">1000+</h3>
+            <p class="text-muted">Active Learners</p>
+        </div>
+        <div class="col-md-3 text-center mb-3">
+            <h3 class="text-warning fw-bold">95%</h3>
+            <p class="text-muted">Satisfaction Rate</p>
+        </div>
+    </div>
+
+    <!-- How It Works Section -->
+    <div class="row mb-4">
+        <div class="col-lg-12 text-center mb-3">
+            <h2 class="fw-bold">How EduMate Works</h2>
+            <p class="text-muted">Simple steps to start your personalized learning journey</p>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="text-center">
+                <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px; font-size: 1.5rem;">
+                    1
+                </div>
+                <h5>Create Account</h5>
+                <p class="text-muted">Sign up and tell us about your learning interests</p>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="text-center">
+                <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px; font-size: 1.5rem;">
+                    2
+                </div>
+                <h5>Get Recommendations</h5>
+                <p class="text-muted">Receive personalized content suggestions</p>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="text-center">
+                <div class="bg-info text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px; font-size: 1.5rem;">
+                    3
+                </div>
+                <h5>Learn & Track</h5>
+                <p class="text-muted">Study at your own pace and monitor progress</p>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="text-center">
+                <div class="bg-warning text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px; font-size: 1.5rem;">
+                    4
+                </div>
+                <h5>Improve & Grow</h5>
+                <p class="text-muted">Share feedback to enhance recommendations</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SDG Alignment -->
+    <div class="bg-success text-white p-4 rounded text-center mb-3">
+        <i class="fas fa-globe-americas mb-3" style="font-size: 2.5rem;"></i>
+        <h4 class="mb-3">Supporting UN Sustainable Development Goal 4</h4>
+        <p class="lead">Quality Education - Ensure inclusive and equitable quality education and promote lifelong learning opportunities for all</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

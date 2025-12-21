@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Content - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Manage Content</h1>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Search & Filter Content</h6>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('admin.content') }}">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="search">Search Content</label>
+                            <input type="text" class="form-control" id="search" name="search" 
+                                   value="{{ search_params.search if search_params else '' }}"
+                                   placeholder="Search by title or description">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="type">Content Type</label>
+                            <select class="form-control" id="type" name="type">
+                                <option value="">All Types</option>
+                                <option value="video" {% if search_params.type == 'video' %}selected{% endif %}>Video</option>
+                                <option value="document" {% if search_params.type == 'document' %}selected{% endif %}>Document</option>
+                                <option value="quiz" {% if search_params.type == 'quiz' %}selected{% endif %}>Quiz</option>
+                                <option value="presentation" {% if search_params.type == 'presentation' %}selected{% endif %}>Presentation</option>
+                                <option value="link" {% if search_params.type == 'link' %}selected{% endif %}>Link</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="status">Status</label>
+                            <select class="form-control" id="status" name="status">
+                                <option value="">All Status</option>
+                                <option value="published" {% if search_params.status == 'published' %}selected{% endif %}>Published</option>
+                                <option value="draft" {% if search_params.status == 'draft' %}selected{% endif %}>Draft</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Search
+                </button>
+                <a href="{{ url_for('admin.content') }}" class="btn btn-secondary">Clear</a>
+            </form>
+        </div>
+    </div>
+
+    <!-- Content Table -->
+    <div class="card shadow">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Content List</h6>
+        </div>
+        <div class="card-body">
+            {% if content_list %}
+            <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Title</th>
+                            <th>Type</th>
+                            <th>Category</th>
+                            <th>Uploader</th>
+                            <th>Views</th>
+                            <th>Rating</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for content in content_list %}
+                        <tr>
+                            <td>{{ content.id }}</td>
+                            <td>{{ content.title }}</td>
+                            <td>
+                                <span class="badge badge-info">{{ content.type if content.type else 'Unknown' }}</span>
+                            </td>
+                            <td>{{ content.category_name or 'Uncategorized' }}</td>
+                            <td>{{ content.uploader_name or 'Unknown' }}</td>
+                            <td>{{ content.view_count }}</td>
+                            <td>
+                                {% if content.average_rating %}
+                                    ⭐ {{ "%.1f"|format(content.average_rating) }}
+                                {% else %}
+                                    <span class="text-muted">No rating</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if content.is_published %}
+                                    <span class="badge badge-success">Published</span>
+                                {% else %}
+                                    <span class="badge badge-warning">Draft</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ content.created_at if content.created_at else 'N/A' }}</td>
+                            <td>
+                                <a href="{{ url_for('admin.toggle_content', content_id=content.id) }}" 
+                                   class="btn btn-{% if content.is_published %}warning{% else %}success{% endif %} btn-sm"
+                                   onclick="return confirm('Are you sure you want to {% if content.is_published %}unpublish{% else %}publish{% endif %} this content?')">
+                                    {% if content.is_published %}
+                                        <i class="fas fa-eye-slash"></i> Unpublish
+                                    {% else %}
+                                        <i class="fas fa-eye"></i> Publish
+                                    {% endif %}
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <p class="text-gray-500">No content found matching your criteria.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

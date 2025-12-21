@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Users - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Manage Users</h1>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Search & Filter Users</h6>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('admin.users') }}">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="search">Search Users</label>
+                            <input type="text" class="form-control" id="search" name="search" 
+                                   value="{{ search_params.search if search_params else '' }}"
+                                   placeholder="Search by username, email, or name">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="role">Role</label>
+                            <select class="form-control" id="role" name="role">
+                                <option value="">All Roles</option>
+                                <option value="student" {% if search_params.role == 'student' %}selected{% endif %}>Student</option>
+                                <option value="instructor" {% if search_params.role == 'instructor' %}selected{% endif %}>Instructor</option>
+                                <option value="admin" {% if search_params.role == 'admin' %}selected{% endif %}>Admin</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="status">Status</label>
+                            <select class="form-control" id="status" name="status">
+                                <option value="">All Status</option>
+                                <option value="active" {% if search_params.status == 'active' %}selected{% endif %}>Active</option>
+                                <option value="inactive" {% if search_params.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Search
+                </button>
+                <a href="{{ url_for('admin.users') }}" class="btn btn-secondary">Clear</a>
+            </form>
+        </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="card shadow">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Users List</h6>
+        </div>
+        <div class="card-body">
+            {% if users_list %}
+            <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Full Name</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users_list %}
+                        <tr>
+                            <td>{{ user.id }}</td>
+                            <td>{{ user.username }}</td>
+                            <td>{{ user.email }}</td>
+                            <td>{{ user.full_name }}</td>
+                            <td>
+                                <span class="badge badge-{% if user.role == 'admin' %}danger{% elif user.role == 'instructor' %}warning{% else %}info{% endif %}">
+                                    {{ user.role if user.role else 'Unknown' }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if user.is_active %}
+                                    <span class="badge badge-success">Active</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ user.created_at if user.created_at else 'N/A' }}</td>
+                            <td>
+                                {% if user.role != 'admin' %}
+                                    <a href="{{ url_for('admin.toggle_user', user_id=user.id) }}" 
+                                       class="btn btn-{% if user.is_active %}warning{% else %}success{% endif %} btn-sm"
+                                       onclick="return confirm('Are you sure you want to {% if user.is_active %}deactivate{% else %}activate{% endif %} this user?')">
+                                        {% if user.is_active %}
+                                            <i class="fas fa-ban"></i> Deactivate
+                                        {% else %}
+                                            <i class="fas fa-check"></i> Activate
+                                        {% endif %}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">Admin</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <p class="text-gray-500">No users found matching your criteria.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

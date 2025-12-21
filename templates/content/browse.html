@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block title %}Browse Content - EduMate{% endblock %}
+
+{% block extra_css %}
+<style>
+.content-card {
+    transition: transform 0.2s;
+    height: 100%;
+}
+.content-card:hover {
+    transform: translateY(-5px);
+}
+.content-img {
+    height: 200px;
+    object-fit: cover;
+}
+.content-type-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">Browse Content</h1>
+            {% if session.role == 'admin' %}
+            <small class="text-muted">
+                <i class="fas fa-info-circle"></i> As an administrator, you can see all content including unpublished drafts for moderation.
+            </small>
+            {% endif %}
+        </div>
+        {% if session.role == 'instructor' or session.role == 'admin' %}
+        <a href="{{ url_for('content.upload') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Upload Content
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Search & Filter</h6>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('content.browse') }}">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="q">Search</label>
+                            <input type="text" class="form-control" id="q" name="q" 
+                                   value="{{ request.args.get('q', '') }}"
+                                   placeholder="Search content...">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label for="category">Category</label>
+                            <select class="form-control" id="category" name="category">
+                                <option value="">All Categories</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}" 
+                                        {% if request.args.get('category') == category.id|string %}selected{% endif %}>
+                                    {{ category.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label for="difficulty">Difficulty</label>
+                            <select class="form-control" id="difficulty" name="difficulty">
+                                <option value="">All Levels</option>
+                                <option value="beginner" {% if request.args.get('difficulty') == 'beginner' %}selected{% endif %}>Beginner</option>
+                                <option value="intermediate" {% if request.args.get('difficulty') == 'intermediate' %}selected{% endif %}>Intermediate</option>
+                                <option value="advanced" {% if request.args.get('difficulty') == 'advanced' %}selected{% endif %}>Advanced</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label for="type">Type</label>
+                            <select class="form-control" id="type" name="type">
+                                <option value="">All Types</option>
+                                <option value="video" {% if request.args.get('type') == 'video' %}selected{% endif %}>Video</option>
+                                <option value="document" {% if request.args.get('type') == 'document' %}selected{% endif %}>Document</option>
+                                <option value="quiz" {% if request.args.get('type') == 'quiz' %}selected{% endif %}>Quiz</option>
+                                <option value="presentation" {% if request.args.get('type') == 'presentation' %}selected{% endif %}>Presentation</option>
+                                <option value="link" {% if request.args.get('type') == 'link' %}selected{% endif %}>Link</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search"></i> Search
+                                </button>
+                                <a href="{{ url_for('content.browse') }}" class="btn btn-secondary">Clear</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Count -->
+    {% if request.args.get('q') or request.args.get('category') or request.args.get('difficulty') or request.args.get('type') %}
+    <div class="alert alert-info">
+        <strong>{{ total_count }}</strong> results found for your search criteria.
+        <a href="{{ url_for('content.browse') }}" class="float-right">Clear filters</a>
+    </div>
+    {% endif %}
+
+    <!-- Content Grid -->
+    {% if content_list %}
+    <div class="row">
+        {% for item in content_list %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card content-card shadow h-100">
+                <div class="position-relative">
+                    {% if item.type == 'video' %}
+                    <img class="card-img-top content-img" src="https://picsum.photos/seed/video{{ item.id }}/400/200.jpg" alt="Video thumbnail">
+                    <div class="video-overlay">
+                        <div class="play-button">
+                            <i class="fas fa-play-circle"></i>
+                        </div>
+                    </div>
+                    {% elif item.type == 'document' %}
+                        {% if item.file_url and item.file_url.startswith('http') and 'jpg' in item.file_url.lower() %}
+                        <img class="card-img-top content-img" src="{{ item.file_url }}" alt="Document">
+                        {% else %}
+                        <img class="card-img-top content-img" src="https://picsum.photos/seed/document{{ item.id }}/400/200.jpg" alt="Document">
+                        {% endif %}
+                    {% elif item.type == 'quiz' %}
+                    <img class="card-img-top content-img" src="https://picsum.photos/seed/quiz{{ item.id }}/400/200.jpg" alt="Quiz">
+                    {% elif item.type == 'presentation' %}
+                        {% if item.file_url and item.file_url.startswith('http') and 'jpg' in item.file_url.lower() %}
+                        <img class="card-img-top content-img" src="{{ item.file_url }}" alt="Presentation">
+                        {% else %}
+                        <img class="card-img-top content-img" src="https://picsum.photos/seed/presentation{{ item.id }}/400/200.jpg" alt="Presentation">
+                        {% endif %}
+                    {% elif item.type == 'link' %}
+                    <img class="card-img-top content-img" src="https://picsum.photos/seed/link{{ item.id }}/400/200.jpg" alt="External Link">
+                    {% else %}
+                    <img class="card-img-top content-img" src="https://picsum.photos/seed/content{{ item.id }}/400/200.jpg" alt="Content">
+                    {% endif %}
+                    
+                    <span class="badge badge-{% if item.type == 'video' %}danger{% elif item.type == 'document' %}primary{% elif item.type == 'quiz' %}success{% elif item.type == 'presentation' %}warning{% else %}info{% endif %} content-type-badge">
+                        {{ item.type if item.type else 'Unknown' }}
+                    </span>
+                    
+                    <!-- Admin: Show publish status -->
+                    {% if session.role == 'admin' %}
+                        {% if not item.is_published %}
+                        <span class="badge badge-warning" style="position: absolute; top: 45px; right: 10px;">
+                            <i class="fas fa-eye-slash"></i> Draft
+                        </span>
+                        {% endif %}
+                    {% endif %}
+                    
+                    {% if item.user_viewed %}
+                    <span class="badge badge-success" style="position: absolute; top: 10px; left: 10px;">
+                        <i class="fas fa-check"></i> Viewed
+                    </span>
+                    {% endif %}
+                </div>
+                
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">{{ item.title }}</h5>
+                    <p class="card-text text-muted small mb-2">
+                        <i class="fas fa-folder"></i> {{ item.category_name or 'Uncategorized' }}
+                        {% if item.difficulty_level %}
+                        <span class="float-right">
+                            <span class="badge badge-{% if item.difficulty_level == 'beginner' %}success{% elif item.difficulty_level == 'intermediate' %}warning{% else %}danger{% endif %}">
+                                {{ item.difficulty_level if item.difficulty_level else 'Unknown' }}
+                            </span>
+                        </span>
+                        {% endif %}
+                    </p>
+                    
+                    <p class="card-text text-truncate-2">{{ item.description or 'Explore this learning resource to enhance your skills and knowledge.' }}</p>
+                    
+                    <div class="mt-auto">
+                        <div class="row align-items-center">
+                            <div class="col-8">
+                                <small class="text-muted">
+                                    {% if item.average_rating %}
+                                    <i class="fas fa-star text-warning"></i> {{ "%.1f"|format(item.average_rating) }}
+                                    {% else %}
+                                    <i class="far fa-star text-muted"></i> No rating
+                                    {% endif %}
+                                    • {{ item.view_count or 0 }} views
+                                </small>
+                            </div>
+                            <div class="col-4 text-right">
+                                {% if session.role == 'admin' %}
+                                    <!-- Admin actions -->
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ url_for('content.view', content_id=item.id) }}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('admin.toggle_content', content_id=item.id) }}" 
+                                           class="btn btn-sm {% if item.is_published %}btn-warning{% else %}btn-success{% endif %}"
+                                           title="{% if item.is_published %}Unpublish content{% else %}Publish content{% endif %}"
+                                           onclick="return confirm('Are you sure you want to {% if item.is_published %}unpublish{% else %}publish{% endif %} this content?')">
+                                            {% if item.is_published %}
+                                                <i class="fas fa-eye-slash"></i>
+                                            {% else %}
+                                                <i class="fas fa-check"></i>
+                                            {% endif %}
+                                        </a>
+                                    </div>
+                                {% else %}
+                                    <!-- Regular user actions -->
+                                    <a href="{{ url_for('content.view', content_id=item.id) }}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-user"></i> {{ item.uploader_name or 'Unknown' }} 
+                                • {{ item.created_at if item.created_at else 'Unknown date' }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <nav aria-label="Content pagination">
+        <ul class="pagination justify-content-center">
+            {% if current_page > 1 %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('content.browse', page=current_page-1, q=request.args.get('q'), category=request.args.get('category'), difficulty=request.args.get('difficulty'), type=request.args.get('type')) }}">
+                    Previous
+                </a>
+            </li>
+            {% endif %}
+            
+            {% for page_num in range(1, total_pages + 1) %}
+                {% if page_num == current_page %}
+                <li class="page-item active">
+                    <span class="page-link">{{ page_num }}</span>
+                </li>
+                {% elif page_num <= 3 or page_num > total_pages - 3 or (page_num >= current_page - 1 and page_num <= current_page + 1) %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('content.browse', page=page_num, q=request.args.get('q'), category=request.args.get('category'), difficulty=request.args.get('difficulty'), type=request.args.get('type')) }}">
+                        {{ page_num }}
+                    </a>
+                </li>
+                {% elif page_num == 4 or page_num == total_pages - 3 %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if current_page < total_pages %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('content.browse', page=current_page+1, q=request.args.get('q'), category=request.args.get('category'), difficulty=request.args.get('difficulty'), type=request.args.get('type')) }}">
+                    Next
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <!-- No Content Found -->
+    <div class="text-center py-5">
+        <i class="fas fa-folder-open fa-3x text-gray-400 mb-3"></i>
+        <h4 class="text-gray-600">No Content Found</h4>
+        <p class="text-gray-500">
+            {% if request.args.get('q') or request.args.get('category') or request.args.get('difficulty') or request.args.get('type') %}
+                Try adjusting your search criteria or filters.
+            {% else %}
+                No content has been added to the platform yet.
+                {% if session.role == 'instructor' or session.role == 'admin' %}
+                <a href="{{ url_for('content.upload') }}" class="btn btn-primary ml-2">
+                    <i class="fas fa-plus"></i> Add Content
+                </a>
+                {% endif %}
+            {% endif %}
+        </p>
+        {% if request.args.get('q') or request.args.get('category') or request.args.get('difficulty') or request.args.get('type') %}
+        <a href="{{ url_for('content.browse') }}" class="btn btn-secondary">
+            <i class="fas fa-times"></i> Clear Filters
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

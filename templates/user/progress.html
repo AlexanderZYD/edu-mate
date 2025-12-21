@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Learning Progress - EduMate{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-chart-line"></i> Learning Progress</h2>
+        <a href="{{ url_for('user.profile') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Profile
+        </a>
+    </div>
+    
+    <!-- Learning Statistics Overview -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-fire fa-3x text-warning mb-3"></i>
+                    <h4>{{ streak_data.learning_days or 0 }}</h4>
+                    <p class="text-muted">Learning Days (30 days)</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-book fa-3x text-info mb-3"></i>
+                    <h4>{{ progress_by_category|length }}</h4>
+                    <p class="text-muted">Subjects Studying</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-clock fa-3x text-success mb-3"></i>
+                    <h4>{{ weekly_activity|length }}</h4>
+                    <p class="text-muted">Active Days This Week</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Subject Progress -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-tasks"></i> Subject Progress</h5>
+        </div>
+        <div class="card-body">
+            {% if progress_by_category %}
+                {% for category in progress_by_category %}
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span><strong>{{ category.category_name }}</strong></span>
+                        <span>{{ "%.1f"|format(category.completion_percentage or 0) }}%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" 
+                             style="width: {{ category.completion_percentage or 0 }}%"
+                             aria-valuenow="{{ category.completion_percentage or 0 }}" 
+                             aria-valuemin="0" aria-valuemax="100">
+                            {{ category.content_completed or 0 }}/{{ category.total_content or 0 }} Completed
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-chart-bar fa-4x text-muted mb-3"></i>
+                    <p class="text-muted">No learning progress data yet</p>
+                    <a href="{{ url_for('content.browse') }}" class="btn btn-primary">
+                        <i class="fas fa-play"></i> Start Learning
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- This Week's Learning Time -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-calendar-week"></i> This Week's Learning Time</h5>
+        </div>
+        <div class="card-body">
+            {% if weekly_activity %}
+                <div class="row">
+                    {% for day in weekly_activity %}
+                    <div class="col-md-1 text-center mb-3">
+                        <div class="small text-muted">{{ day.activity_date[5:]|replace('-', '/') }}</div>
+                        <div class="h5">{{ day.total_minutes // 60 or 0 }}h</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> 
+                    Total learning time this week: {{ (weekly_activity|sum(attribute='total_minutes') // 60) or 0 }}h {{ (weekly_activity|sum(attribute='total_minutes') % 60) or 0 }}min
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-calendar-alt fa-4x text-muted mb-3"></i>
+                    <p class="text-muted">No learning records this week</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+
+{% block title %}Account Settings - EduMate{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body p-0">
+                    <nav class="nav nav-pills flex-column">
+                        <a class="nav-link active" href="#password" data-bs-toggle="pill">
+                            <i class="fas fa-lock"></i> Change Password
+                        </a>
+                        <a class="nav-link" href="#preferences" data-bs-toggle="pill">
+                            <i class="fas fa-sliders-h"></i> Learning Preferences
+                        </a>
+                        <a class="nav-link" href="#notifications" data-bs-toggle="pill">
+                            <i class="fas fa-bell"></i> Notification Settings
+                        </a>
+                    </nav>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-9">
+            <div class="tab-content">
+                <!-- Change Password -->
+                <div class="tab-pane fade show active" id="password">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-lock"></i> Change Password</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" id="changePasswordForm" action="{{ url_for('user.settings') }}">
+                                <div class="mb-3">
+                                    <label for="current_password" class="form-label">Current Password</label>
+                                    <input type="password" class="form-control" id="current_password" 
+                                           name="current_password" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="new_password" class="form-label">New Password</label>
+                                    <input type="password" class="form-control" id="new_password" 
+                                           name="new_password" minlength="6" maxlength="20"
+                                           pattern="[a-zA-Z0-9]+" title="Only letters and numbers allowed" required>
+                                    <small class="text-muted">Password must be 6-20 characters, letters and numbers only.</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="confirm_password" class="form-label">Confirm New Password</label>
+                                    <input type="password" class="form-control" id="confirm_password" 
+                                           name="confirm_password" minlength="6" required>
+                                    <small class="text-muted">Enter the same password as above to confirm.</small>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Update Password
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Learning Preferences -->
+                <div class="tab-pane fade" id="preferences">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-sliders-h"></i> Learning Preferences</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" id="preferencesForm">
+                                <div class="mb-4">
+                                    <label class="form-label">Difficulty Preference</label>
+                                    <div class="btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="preferred_difficulty" 
+                                               id="diff_beginner" value="beginner"
+                                               {% if user.preferred_difficulty == 'beginner' %}checked{% endif %}>
+                                        <label class="btn btn-outline-success" for="diff_beginner">Beginner</label>
+                                        
+                                        <input type="radio" class="btn-check" name="preferred_difficulty" 
+                                               id="diff_mixed" value="mixed"
+                                               {% if not user.preferred_difficulty or user.preferred_difficulty == 'mixed' %}checked{% endif %}>
+                                        <label class="btn btn-outline-primary" for="diff_mixed">Mixed</label>
+                                        
+                                        <input type="radio" class="btn-check" name="preferred_difficulty" 
+                                               id="diff_advanced" value="advanced"
+                                               {% if user.preferred_difficulty == 'advanced' %}checked{% endif %}>
+                                        <label class="btn btn-outline-danger" for="diff_advanced">Advanced</label>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label class="form-label">Content Type Preferences</label>
+                                    <div class="row">
+                                        <div class="col-md-4 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="preferred_content_types" 
+                                                       value="video" id="type_video"
+                                                       {% if user.preferred_content_types and 'video' in user.preferred_content_types %}checked{% endif %}>
+                                                <label class="form-check-label" for="type_video">
+                                                    <i class="fas fa-video"></i> Video
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="preferred_content_types" 
+                                                       value="article" id="type_article"
+                                                       {% if user.preferred_content_types and 'article' in user.preferred_content_types %}checked{% endif %}>
+                                                <label class="form-check-label" for="type_article">
+                                                    <i class="fas fa-newspaper"></i> Article
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="preferred_content_types" 
+                                                       value="quiz" id="type_quiz"
+                                                       {% if user.preferred_content_types and 'quiz' in user.preferred_content_types %}checked{% endif %}>
+                                                <label class="form-check-label" for="type_quiz">
+                                                    <i class="fas fa-question-circle"></i> Quiz
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label class="form-label">Subject Category Preferences</label>
+                                    <div class="row">
+                                        {% if categories %}
+                                            {% for category in categories %}
+                                            <div class="col-md-3 mb-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="preferred_categories" 
+                                                           value="{{ category.name }}" id="cat_{{ category.id }}"
+                                                           {% if user.preferred_categories and category.name in user.preferred_categories %}checked{% endif %}>
+                                                    <label class="form-check-label" for="cat_{{ category.id }}">
+                                                        {{ category.name }}
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <div class="col-12">
+                                                <div class="alert alert-info">
+                                                    <i class="fas fa-info-circle"></i> No categories available
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="learning_goals" class="form-label">Learning Goals</label>
+                                    <textarea class="form-control" id="learning_goals" name="learning_goals" 
+                                              rows="4" placeholder="Describe your learning goals...">{{ user.learning_goals or '' }}</textarea>
+                                    <small class="text-muted">Setting clear learning goals helps us recommend more suitable content for you</small>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Save Preferences
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Notification Settings -->
+                <div class="tab-pane fade" id="notifications">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-bell"></i> Notification Settings</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> Notification feature coming soon, stay tuned!
+                            </div>
+                            <div class="text-center py-5">
+                                <i class="fas fa-bell-slash fa-4x text-muted mb-3"></i>
+                                <p class="text-muted">Notification settings are under development</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const changePasswordForm = document.getElementById('changePasswordForm');
+    if (changePasswordForm) {
+        const newPasswordField = changePasswordForm.querySelector('#new_password');
+        const confirmPasswordField = changePasswordForm.querySelector('#confirm_password');
+        const currentPasswordField = changePasswordForm.querySelector('#current_password');
+        
+        // Remove any existing validation from main.js
+        if (confirmPasswordField) {
+            confirmPasswordField.setCustomValidity('');
+        }
+        
+        // Custom validation for new password and confirm password
+        if (newPasswordField && confirmPasswordField) {
+            confirmPasswordField.addEventListener('input', function() {
+                if (this.value !== newPasswordField.value) {
+                    this.setCustomValidity('Passwords do not match');
+                    this.classList.add('is-invalid');
+                } else {
+                    this.setCustomValidity('');
+                    this.classList.remove('is-invalid');
+                }
+            });
+            
+            newPasswordField.addEventListener('input', function() {
+                if (confirmPasswordField.value && this.value !== confirmPasswordField.value) {
+                    confirmPasswordField.setCustomValidity('Passwords do not match');
+                    confirmPasswordField.classList.add('is-invalid');
+                } else {
+                    confirmPasswordField.setCustomValidity('');
+                    confirmPasswordField.classList.remove('is-invalid');
+                }
+            });
+        }
+        
+        // Form submission validation
+        changePasswordForm.addEventListener('submit', function(event) {
+            // Check if new password and confirm password match
+            if (newPasswordField.value !== confirmPasswordField.value) {
+                event.preventDefault();
+                event.stopPropagation();
+                confirmPasswordField.setCustomValidity('Passwords do not match');
+                confirmPasswordField.classList.add('is-invalid');
+                
+                // Show alert
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                alertDiv.innerHTML = `
+                    New passwords do not match. Please check and try again.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                changePasswordForm.insertBefore(alertDiv, changePasswordForm.firstChild);
+                
+                // Auto-hide after 5 seconds
+                setTimeout(() => {
+                    if (alertDiv.parentNode) {
+                        const bsAlert = new bootstrap.Alert(alertDiv);
+                        bsAlert.close();
+                    }
+                }, 5000);
+                
+                return;
+            }
+            
+            // Check if all fields are filled
+            if (!currentPasswordField.value || !newPasswordField.value || !confirmPasswordField.value) {
+                event.preventDefault();
+                event.stopPropagation();
+                
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                alertDiv.innerHTML = `
+                    Please fill in all password fields.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                changePasswordForm.insertBefore(alertDiv, changePasswordForm.firstChild);
+                
+                return;
+            }
+            
+            // Check new password length
+            if (newPasswordField.value.length < 6) {
+                event.preventDefault();
+                event.stopPropagation();
+                
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                alertDiv.innerHTML = `
+                    New password must be at least 6 characters long.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                changePasswordForm.insertBefore(alertDiv, changePasswordForm.firstChild);
+                
+                return;
+            }
+            
+            // Clear any existing errors
+            confirmPasswordField.setCustomValidity('');
+            confirmPasswordField.classList.remove('is-invalid');
+        });
+    }
+});
+</script>
+
+{% endblock %}

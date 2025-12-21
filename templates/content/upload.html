@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Content - EduMate{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h4 class="m-0 font-weight-bold text-primary">Upload New Content</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="title">Title *</label>
+                                    <input type="text" class="form-control" id="title" name="title" required
+                                           placeholder="Enter content title">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="type">Content Type *</label>
+                                    <select class="form-control" id="type" name="type" required>
+                                        <option value="">Select type...</option>
+                                        <option value="video">Video</option>
+                                        <option value="document">Document</option>
+                                        <option value="link">External Link</option>
+                                        <option value="presentation">Presentation</option>
+                                        <option value="pdf">PDF</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="description">Description *</label>
+                            <textarea class="form-control" id="description" name="description" rows="4" required
+                                      placeholder="Describe your content..."></textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="difficulty">Difficulty Level *</label>
+                                    <select class="form-control" id="difficulty" name="difficulty" required>
+                                        <option value="">Select level...</option>
+                                        <option value="beginner">Beginner</option>
+                                        <option value="intermediate">Intermediate</option>
+                                        <option value="advanced">Advanced</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="category_id">Category</label>
+                                    <select class="form-control" id="category_id" name="category_id">
+                                        <option value="">Select category...</option>
+                                        {% for category in categories %}
+                                        <option value="{{ category.id }}">{{ category.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="tags">Tags (comma separated)</label>
+                            <input type="text" class="form-control" id="tags" name="tags"
+                                   placeholder="e.g., python, programming, tutorial">
+                        </div>
+
+                        <!-- Content Type Specific Fields -->
+                        <div class="form-group">
+                            <label>Content Source</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="source_type" id="upload_file" value="file" checked>
+                                <label class="form-check-label" for="upload_file">
+                                    Upload File
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="source_type" id="external_link" value="link">
+                                <label class="form-check-label" for="external_link">
+                                    External Link
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- File Upload -->
+                        <div class="form-group" id="file_upload_group">
+                            <label for="file">Choose File</label>
+                            <input type="file" class="form-control-file" id="file" name="file"
+                                   accept=".pdf,.doc,.docx,.ppt,.pptx,.mp4,.avi,.mov">
+                            <small class="form-text text-muted">
+                                Supported formats: PDF, DOC, DOCX, PPT, PPTX, MP4, AVI, MOV
+                            </small>
+                        </div>
+
+                        <!-- External Link -->
+                        <div class="form-group" id="external_link_group" style="display: none;">
+                            <label for="external_link">External URL</label>
+                            <input type="url" class="form-control" id="external_link" name="external_link"
+                                   placeholder="https://example.com/resource">
+                            <small class="form-text text-muted">
+                                Provide a link to external resource (YouTube, GitHub, etc.)
+                            </small>
+                        </div>
+
+                        <hr>
+
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="publish_now" name="publish_now" checked>
+                                <label class="form-check-label" for="publish_now">
+                                    Publish immediately (uncheck to save as draft)
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="g-recaptcha" data-sitekey="YOUR_RECAPTCHA_SITE_KEY"></div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-upload"></i> Upload Content
+                        </button>
+                        <a href="{{ url_for('content.browse') }}" class="btn btn-secondary btn-lg">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Toggle between file upload and external link
+document.getElementById('upload_file').addEventListener('change', function() {
+    document.getElementById('file_upload_group').style.display = 'block';
+    document.getElementById('external_link_group').style.display = 'none';
+});
+
+document.getElementById('external_link').addEventListener('change', function() {
+    document.getElementById('file_upload_group').style.display = 'none';
+    document.getElementById('external_link_group').style.display = 'block';
+});
+</script>
+{% endblock %}

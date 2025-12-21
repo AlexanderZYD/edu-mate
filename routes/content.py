@@ -1,0 +1,588 @@
+"""
+Content Management Routes - Browse, Upload, View Content
+"""
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, current_app
+import sqlite3
+from datetime import datetime
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+content_bp = Blueprint('content', __name__)
+
+def get_db_connection():
+    """Get database connection"""
+    try:
+        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'edumate_local.db')
+        connection = sqlite3.connect(db_path)
+        connection.row_factory = sqlite3.Row  # This makes results behave like dictionaries
+        return connection
+    except Exception as err:
+        flash(f'Database error: {err}', 'error')
+        return None
+
+@content_bp.route('/browse')
+def browse():
+    """Browse and search content"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    connection = get_db_connection()
+    if not connection:
+        return redirect(url_for('dashboard'))
+    
+    try:
+        cursor = connection.cursor()
+        
+        # Get search parameters
+        search_query = request.args.get('q', '')
+        category_id = request.args.get('category', '')
+        difficulty = request.args.get('difficulty', '')
+        content_type = request.args.get('type', '')
+        page = int(request.args.get('page', 1))
+        per_page = 12
+        
+        # Build query
+        # Admins can see all content (including unpublished) for moderation
+        if session.get('role') == 'admin':
+            where_conditions = []  # Admins see all content
+        else:
+            where_conditions = ["c.is_published = 1"]  # Others only see published content
+        params = []
+        
+        # Debug: log the query building process
+        current_app.logger.debug(f"User role: {session.get('role')}")
+        current_app.logger.debug(f"Where conditions: {where_conditions}")
+        
+        if search_query:
+            where_conditions.append("(c.title LIKE ? OR c.description LIKE ?)")
+            params.extend([f'%{search_query}%', f'%{search_query}%'])
+        
+        if category_id:
+            where_conditions.append("c.category_id = ?")
+            params.append(category_id)
+        
+        if difficulty:
+            where_conditions.append("c.difficulty_level = ?")
+            params.append(difficulty)
+        
+        if content_type:
+            where_conditions.append("c.type = ?")
+            params.append(content_type)
+        
+        # Build WHERE clause
+        if where_conditions:
+            where_clause = " AND ".join(where_conditions)
+        else:
+            where_clause = "1=1"  # Always true condition
+        
+        # Get total count
+        count_query = f"""
+            SELECT COUNT(*) as total
+            FROM content c
+            WHERE {where_clause}
+        """
+        cursor.execute(count_query, params)
+        total_count = cursor.fetchone()['total']
+        
+        # Get paginated results
+        offset = (page - 1) * per_page
+        
+        query = f"""
+            SELECT 
+                c.*,
+                cat.name as category_name,
+                u.full_name as uploader_name,
+                CASE WHEN ua.content_id IS NOT NULL THEN 1 ELSE 0 END as user_viewed
+            FROM content c
+            LEFT JOIN categories cat ON c.category_id = cat.id
+            LEFT JOIN users u ON c.uploaded_by = u.id
+            LEFT JOIN user_activities ua ON c.id = ua.content_id AND ua.user_id = ?
+            WHERE {where_clause}
+            ORDER BY c.created_at DESC
+            LIMIT ? OFFSET ?
+        """
+        
+        cursor.execute(query, [session['user_id']] + params + [per_page, offset])
+        content_list = cursor.fetchall()
+        
+        # Get categories for filter
+        cursor.execute("SELECT id, name FROM categories ORDER BY name")
+        categories = cursor.fetchall()
+        
+        cursor.close()
+        connection.close()
+        
+        total_pages = (total_count + per_page - 1) // per_page
+        
+        return render_template('content/browse.html',
+                             content_list=content_list,
+                             categories=categories,
+                             total_count=total_count,
+                             total_pages=total_pages,
+                             current_page=page,
+                             search_params=request.args)
+    
+    except Exception as err:
+        flash(f'Error loading content: {err}', 'error')
+        return redirect(url_for('dashboard'))
+
+@content_bp.route('/upload', methods=['GET', 'POST'])
+def upload():
+    """Upload new content"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    # Check if user is instructor or admin
+    if session.get('role') not in ['instructor', 'admin']:
+        flash('Only instructors can upload content', 'error')
+        # Redirect based on user role
+        if session.get('user_role') == 'admin':
+            return redirect(url_for('admin.dashboard'))
+        elif session.get('user_role') == 'instructor':
+            return redirect(url_for('user.profile'))
+        else:  # student
+            return redirect(url_for('index'))
+    
+    connection = get_db_connection()
+    if not connection:
+        return redirect(url_for('dashboard'))
+    
+    try:
+        cursor = connection.cursor()
+        
+        # Get categories for the form
+        cursor.execute("SELECT id, name FROM categories ORDER BY name")
+        categories = cursor.fetchall()
+        
+        if request.method == 'POST':
+            title = request.form.get('title')
+            description = request.form.get('description')
+            content_type = request.form.get('type')
+            difficulty = request.form.get('difficulty')
+            category_id = request.form.get('category_id')
+            tags = request.form.getlist('tags')
+            external_link = request.form.get('external_link')
+            
+            # Validation
+            if not all([title, content_type, difficulty]):
+                flash('Please fill in all required fields', 'error')
+                return render_template('content/upload.html')
+            
+            if content_type in ['video', 'document', 'presentation'] and not external_link:
+                flash('Please provide a file URL or external link', 'error')
+                return render_template('content/upload.html')
+            
+            # Insert content
+            tags_json = str(tags) if tags else None
+            
+            cursor.execute("""
+                INSERT INTO content 
+                (title, description, type, difficulty_level, external_link, 
+                 uploaded_by, category_id, tags, is_published, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                title, description, content_type, difficulty, external_link,
+                session['user_id'], category_id or None, tags_json,
+                1, datetime.now(), datetime.now()  # SQLite uses 1 for boolean
+            ))
+            
+            content_id = cursor.lastrowid
+            connection.commit()
+            
+            # Log the upload
+            cursor.execute("""
+                INSERT INTO system_logs (user_id, action, resource_type, resource_id, created_at)
+                VALUES (?, ?, ?, ?, ?)
+            """, (session['user_id'], 'UPLOADED', 'content', content_id, datetime.now()))
+            connection.commit()
+            
+            flash('Content uploaded successfully!', 'success')
+            return redirect(url_for('content.view', content_id=content_id))
+        
+        # GET request - show upload form
+        cursor.execute("SELECT id, name FROM categories ORDER BY name")
+        categories = cursor.fetchall()
+        
+        cursor.close()
+        connection.close()
+        
+        return render_template('content/upload.html', categories=categories)
+    
+    except Exception as err:
+        flash(f'Error uploading content: {err}', 'error')
+        return redirect(url_for('dashboard'))
+
+@content_bp.route('/<int:content_id>')
+def view(content_id):
+    """View specific content"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    connection = get_db_connection()
+    if not connection:
+        return redirect(url_for('content.browse'))
+    
+    try:
+        cursor = connection.cursor()
+        
+        # Get content details
+        cursor.execute("""
+            SELECT 
+                c.*,
+                cat.name as category_name,
+                u.full_name as uploader_name,
+                u.username as uploader_username
+            FROM content c
+            LEFT JOIN categories cat ON c.category_id = cat.id
+            LEFT JOIN users u ON c.uploaded_by = u.id
+            WHERE c.id = ? AND c.is_published = 1
+        """, (content_id,))
+        
+        content = cursor.fetchone()
+        
+        if not content:
+            flash('Content not found', 'error')
+            return redirect(url_for('content.browse'))
+        
+        # Increment view count
+        cursor.execute("""
+            UPDATE content 
+            SET view_count = view_count + 1 
+            WHERE id = ?
+        """, (content_id,))
+        
+        # Log user activity (SQLite uses INSERT OR REPLACE for ON DUPLICATE KEY)
+        cursor.execute("""
+            INSERT OR REPLACE INTO user_activities (user_id, content_id, activity_type, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, (session['user_id'], content_id, 'viewed', datetime.now(), datetime.now()))
+        
+        # Get user's rating for this content
+        cursor.execute("""
+            SELECT cf.rating, cf.comment, cf.created_at,
+                   u.full_name, u.username
+            FROM content_feedback cf
+            JOIN users u ON cf.user_id = u.id
+            WHERE cf.content_id = ? AND cf.user_id = ?
+        """, (content_id, session['user_id']))
+        
+        user_feedback = cursor.fetchone()
+        
+        # Get all feedback for this content
+        cursor.execute("""
+            SELECT 
+                cf.rating, cf.comment, cf.created_at,
+                COALESCE(u.full_name, u.username) as user_name
+            FROM content_feedback cf
+            JOIN users u ON cf.user_id = u.id
+            WHERE cf.content_id = ?
+            ORDER BY cf.created_at DESC
+            LIMIT 10
+        """, (content_id,))
+        
+        feedback_list = cursor.fetchall()
+        
+        # Get feedback count
+        cursor.execute("SELECT COUNT(*) as count FROM content_feedback WHERE content_id = ?", (content_id,))
+        feedback_count = cursor.fetchone()['count']
+        
+        # Get related content (same category) - SQLite uses RANDOM() instead of RAND()
+        cursor.execute("""
+            SELECT id, title, type, difficulty_level, average_rating, view_count
+            FROM content 
+            WHERE category_id = ? AND id != ? AND is_published = 1
+            ORDER BY RANDOM()
+            LIMIT 5
+        """, (content['category_id'], content_id))
+        
+        related_content = cursor.fetchall()
+        
+        # Get uploader name
+        cursor.execute("SELECT full_name FROM users WHERE id = ?", (content['uploaded_by'],))
+        uploader = cursor.fetchone()
+        uploader_name = uploader['full_name'] if uploader else 'Unknown'
+        
+        # Get user activity for this content
+        user_activity = None
+        if 'user_id' in session:
+            cursor.execute("""
+                SELECT activity_type, progress_percentage, time_spent_minutes
+                FROM user_activities 
+                WHERE user_id = ? AND content_id = ?
+                ORDER BY created_at DESC
+                LIMIT 1
+            """, (session['user_id'], content_id))
+            user_activity = cursor.fetchone()
+        
+        connection.commit()
+        cursor.close()
+        connection.close()
+        
+        return render_template('content/view.html',
+                             content=content,
+                             user_feedback=user_feedback,
+                             feedback_list=feedback_list,
+                             feedback_count=feedback_count,
+                             related_content=related_content,
+                             uploader_name=uploader_name,
+                             user_activity=user_activity)
+    
+    except Exception as err:
+        flash(f'Error loading content: {err}', 'error')
+        return redirect(url_for('content.browse'))
+
+@content_bp.route('/<int:content_id>/rate', methods=['POST'])
+def rate(content_id):
+    """Rate content"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+            
+        rating = data.get('rating')
+        comment = data.get('comment', '')
+        
+        if not rating or not (1 <= int(rating) <= 5):
+            return jsonify({'error': 'Invalid rating'}), 400
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'error': 'Failed to connect to database'}), 500
+        
+        cursor = connection.cursor()
+        
+        # Check if feedback already exists
+        cursor.execute("""
+            SELECT id FROM content_feedback 
+            WHERE content_id = ? AND user_id = ?
+        """, (content_id, session['user_id']))
+        
+        existing = cursor.fetchone()
+        
+        current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        if existing:
+            # Update existing rating
+            cursor.execute("""
+                UPDATE content_feedback 
+                SET rating = ?, comment = ?, updated_at = ?
+                WHERE content_id = ? AND user_id = ?
+            """, (int(rating), comment, current_time, content_id, session['user_id']))
+        else:
+            # Insert new rating
+            cursor.execute("""
+                INSERT INTO content_feedback (content_id, user_id, rating, comment, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (content_id, session['user_id'], int(rating), comment, current_time, current_time))
+        
+        # Update content's average rating
+        cursor.execute("""
+            UPDATE content 
+            SET average_rating = (
+                SELECT COALESCE(AVG(CAST(rating AS FLOAT)), 0) 
+                FROM content_feedback 
+                WHERE content_id = ?
+            ),
+            rating_count = (
+                SELECT COUNT(*) 
+                FROM content_feedback 
+                WHERE content_id = ?
+            )
+            WHERE id = ?
+        """, (content_id, content_id, content_id))
+        
+        connection.commit()
+        cursor.close()
+        connection.close()
+        
+        return jsonify({'success': True, 'message': 'Rating submitted successfully'})
+    
+    except ValueError as ve:
+        current_app.logger.error(f"Rating value error: {str(ve)}")
+        return jsonify({'error': f'Invalid rating value: {str(ve)}'}), 400
+    except sqlite3.Error as se:
+        current_app.logger.error(f"Database error in rating: {str(se)}")
+        return jsonify({'error': f'Database error: {str(se)}'}), 500
+    except Exception as err:
+        current_app.logger.error(f"Rating submission error: {str(err)}")
+        import traceback
+        current_app.logger.error(traceback.format_exc())
+        return jsonify({'error': f'An error occurred: {str(err)}'}), 500
+
+@content_bp.route('/<int:content_id>/activity', methods=['POST'])
+def record_activity(content_id):
+    """Record user activity for content"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        # Get JSON data
+        if request.is_json:
+            data = request.get_json()
+            activity_type = data.get('activity_type', 'viewed')
+        else:
+            # Fallback to form data
+            activity_type = request.form.get('activity_type', 'viewed')
+        
+        # Validate activity type
+        valid_activities = ['viewed', 'completed', 'bookmarked']
+        if activity_type not in valid_activities:
+            return jsonify({'error': 'Invalid activity type'}), 400
+        
+        # Check if content exists
+        content = connection.execute(
+            "SELECT id FROM content WHERE id = ? AND is_published = 1",
+            (content_id,)
+        ).fetchone()
+        
+        if not content:
+            return jsonify({'error': 'Content not found'}), 404
+        
+        # Record the activity using INSERT OR REPLACE to handle duplicates
+        cursor = connection.cursor()
+        cursor.execute("""
+            INSERT OR REPLACE INTO user_activities 
+            (user_id, content_id, activity_type, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, (session['user_id'], content_id, activity_type, datetime.now(), datetime.now()))
+        
+        connection.commit()
+        cursor.close()
+        connection.close()
+        
+        return jsonify({'success': True, 'message': f'Activity {activity_type} recorded'})
+    
+    except Exception as err:
+        current_app.logger.error(f"Error recording activity: {err}")
+        return jsonify({'error': str(err)}), 500
+
+@content_bp.route('/<int:content_id>/edit', methods=['GET', 'POST'])
+def edit(content_id):
+    """Edit existing content"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    if session.get('role') not in ['instructor', 'admin']:
+        flash('You do not have permission to edit content', 'error')
+        return redirect(url_for('content.view', content_id=content_id))
+    
+    connection = get_db_connection()
+    if not connection:
+        flash('Database error', 'error')
+        return redirect(url_for('content.view', content_id=content_id))
+    
+    try:
+        cursor = connection.cursor()
+        
+        # Get content details
+        cursor.execute("""
+            SELECT c.*, cat.name as category_name
+            FROM content c
+            LEFT JOIN categories cat ON c.category_id = cat.id
+            WHERE c.id = ?
+        """, (content_id,))
+        
+        content = cursor.fetchone()
+        
+        if not content:
+            flash('Content not found', 'error')
+            return redirect(url_for('content.browse'))
+        
+        # Check if user has permission to edit this content
+        if session.get('role') != 'admin' and content['uploaded_by'] != session['user_id']:
+            flash('You do not have permission to edit this content', 'error')
+            return redirect(url_for('content.view', content_id=content_id))
+        
+        # Get categories for the form
+        cursor.execute("SELECT id, name FROM categories ORDER BY name")
+        categories = cursor.fetchall()
+        
+        if request.method == 'POST':
+            # Handle form submission
+            title = request.form.get('title', '').strip()
+            description = request.form.get('description', '').strip()
+            content_type = request.form.get('type')
+            difficulty = request.form.get('difficulty')
+            category_id = request.form.get('category_id')
+            tags = request.form.get('tags')
+            external_link = request.form.get('external_link')
+            
+            # Validation
+            if not title:
+                flash('Title is required', 'error')
+                return render_template('content/edit.html', 
+                                    content=content, 
+                                    categories=categories)
+            
+            # Update content
+            cursor.execute("""
+                UPDATE content 
+                SET title = ?, description = ?, type = ?, difficulty_level = ?,
+                    category_id = ?, external_link = ?, tags = ?, updated_at = ?
+                WHERE id = ?
+            """, (
+                title, description, content_type, difficulty, 
+                category_id or None, external_link, tags, 
+                datetime.now(), content_id
+            ))
+            
+            connection.commit()
+            cursor.close()
+            connection.close()
+            
+            flash('Content updated successfully!', 'success')
+            return redirect(url_for('content.view', content_id=content_id))
+        
+        cursor.close()
+        connection.close()
+        return render_template('content/edit.html', 
+                            content=content, 
+                            categories=categories)
+        
+    except Exception as err:
+        flash(f'Error editing content: {err}', 'error')
+        return redirect(url_for('content.view', content_id=content_id))
+
+@content_bp.route('/api/search')
+def api_search():
+    """API endpoint for content search"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    query = request.args.get('q', '')
+    if len(query) < 2:
+        return jsonify({'results': []})
+    
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = connection.cursor()
+        
+        cursor.execute("""
+            SELECT id, title, description, type, category_id
+            FROM content 
+            WHERE is_published = 1 
+            AND (title LIKE ? OR description LIKE ?)
+            ORDER BY title
+            LIMIT 10
+        """, (f'%{query}%', f'%{query}%'))
+        
+        results = cursor.fetchall()
+        cursor.close()
+        connection.close()
+        
+        return jsonify({'results': results})
+    
+    except Exception as err:
+        return jsonify({'error': str(err)}), 500

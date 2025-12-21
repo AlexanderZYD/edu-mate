@@ -1,0 +1,24 @@
+{# Date formatting helper functions #}
+{% macro safe_date(date_obj, format_string='%Y-%m-%d') %}
+    {% if date_obj %}
+        {% if date_obj.strftime %}
+            {{ date_obj.strftime(format_string) }}
+        {% else %}
+            {{ date_obj }}
+        {% endif %}
+    {% else %}
+        Unknown
+    {% endif %}
+{% endmacro %}
+
+{% macro safe_datetime(date_obj) %}
+    {% if date_obj %}
+        {% if date_obj.strftime %}
+            {{ date_obj.strftime('%Y-%m-%d %H:%M') }}
+        {% else %}
+            {{ date_obj }}
+        {% endif %}
+    {% else %}
+        Unknown
+    {% endif %}
+{% endmacro %}
