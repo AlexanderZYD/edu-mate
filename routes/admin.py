@@ -26,7 +26,7 @@ def admin_required(f):
     from functools import wraps
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'user_id' not in session or session.get('role') != 'admin':
+        if 'user_id' not in session or session.get('user_role') != 'admin':
             flash('Admin access required', 'error')
             return redirect(url_for('auth.login'))
         return f(*args, **kwargs)

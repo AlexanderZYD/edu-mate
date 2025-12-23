@@ -1,0 +1,2213 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if is_edit %}Edit Content - EduMate{% else %}Upload Content - EduMate{% endif %}
+{% endblock %}
+
+{% block content %}
+<style>
+/* Custom styles for content form */
+.content-form-container {
+    background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 50%, #f5f0ff 100%);
+    min-height: 100vh;
+    padding: 2rem 0;
+    position: relative;
+}
+
+.content-form-container::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 20% 80%, rgba(13, 110, 253, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(25, 135, 84, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba(253, 126, 20, 0.03) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: -1;
+}
+
+.form-card {
+    border: none;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.08), 0 10px 20px rgba(13, 110, 253, 0.06);
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.form-header {
+    background: linear-gradient(135deg, #4361ee 0%, #3f37c9 50%, #7209b7 100%);
+    color: white;
+    padding: 2.5rem 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.form-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="4" height="4" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="0.5" fill="rgba(255,255,255,0.15)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+    animation: float 20s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    33% { transform: translate(-10px, -10px) rotate(1deg); }
+    66% { transform: translate(10px, -5px) rotate(-1deg); }
+}
+
+.form-header h4 {
+    position: relative;
+    font-weight: 700;
+    margin: 0;
+    font-size: 1.8rem;
+    text-shadow: 0 3px 6px rgba(0,0,0,0.3);
+    letter-spacing: 0.5px;
+}
+
+.form-body {
+    padding: 2.5rem;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%);
+}
+
+.form-section {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 18px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06), 0 2px 8px rgba(13, 110, 253, 0.04);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(13, 110, 253, 0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.form-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #4361ee, #7209b7, #f72585);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.form-section:hover {
+    box-shadow: 0 8px 35px rgba(0,0,0,0.12), 0 4px 15px rgba(13, 110, 253, 0.08);
+    transform: translateY(-4px) scale(1.01);
+    border-color: rgba(13, 110, 253, 0.15);
+}
+
+.form-section:hover::before {
+    opacity: 1;
+}
+
+.section-title {
+    color: #4361ee;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    font-size: 1.15rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    position: relative;
+}
+
+.section-title i {
+    font-size: 1.3rem;
+    background: linear-gradient(135deg, #4361ee, #7209b7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.form-control, .form-select {
+    border: 2px solid rgba(13, 110, 253, 0.15);
+    border-radius: 12px;
+    padding: 0.85rem 1.2rem;
+    font-size: 0.95rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #4361ee;
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.15), 0 4px 12px rgba(67, 97, 238, 0.1);
+    outline: none;
+    transform: translateY(-1px);
+}
+
+.form-label {
+    color: #2d3748;
+    font-weight: 600;
+    margin-bottom: 0.6rem;
+    font-size: 0.9rem;
+    letter-spacing: 0.3px;
+}
+
+.required-star {
+    color: #f72585;
+    margin-left: 4px;
+    font-size: 0.85em;
+}
+
+.border-dashed {
+    border: 2.5px dashed rgba(67, 97, 238, 0.3) !important;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 252, 0.6) 100%);
+    background-size: 20px 20px;
+    background-position: 0 0, 10px 10px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+}
+
+.border-dashed::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, 
+        rgba(67, 97, 238, 0.05) 25%, 
+        transparent 25%, 
+        transparent 75%, 
+        rgba(67, 97, 238, 0.05) 75%);
+    background-size: 30px 30px;
+    animation: slide 20s linear infinite;
+}
+
+@keyframes slide {
+    0% { background-position: 0 0, 0 0; }
+    100% { background-position: 30px 30px, 30px 30px; }
+}
+
+.border-dashed:hover {
+    border-color: rgba(67, 97, 238, 0.6) !important;
+    background: linear-gradient(135deg, rgba(67, 97, 238, 0.08) 0%, rgba(114, 9, 183, 0.05) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(67, 97, 238, 0.1);
+}
+
+.btn-gradient {
+    background: linear-gradient(135deg, #4361ee 0%, #3f37c9 50%, #7209b7 100%);
+    border: none;
+    color: white;
+    font-weight: 600;
+    border-radius: 12px;
+    padding: 0.85rem 2.2rem;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 15px rgba(67, 97, 238, 0.35), 0 2px 8px rgba(114, 9, 183, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-gradient::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.6s ease;
+}
+
+.btn-gradient:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(67, 97, 238, 0.45), 0 4px 12px rgba(114, 9, 183, 0.3);
+    color: white;
+}
+
+.btn-gradient:hover::before {
+    left: 100%;
+}
+
+.btn-secondary-modern {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    border: none;
+    color: white;
+    font-weight: 600;
+    border-radius: 12px;
+    padding: 0.85rem 2.2rem;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.35), 0 2px 8px rgba(90, 98, 104, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-secondary-modern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+    transition: left 0.6s ease;
+}
+
+.btn-secondary-modern:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(108, 117, 125, 0.45), 0 4px 12px rgba(90, 98, 104, 0.3);
+    color: white;
+}
+
+.btn-secondary-modern:hover::before {
+    left: 100%;
+}
+
+.btn-outline-primary {
+    border: 2px solid rgba(67, 97, 238, 0.5);
+    color: #4361ee;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-outline-primary:hover {
+    border-color: #4361ee;
+    background: rgba(67, 97, 238, 0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(67, 97, 238, 0.2);
+}
+
+.btn-check:checked + .btn-outline-primary {
+    background: linear-gradient(135deg, #4361ee 0%, #3f37c9 50%, #7209b7 100%);
+    border-color: #4361ee;
+    color: white;
+    box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+    transform: translateY(-2px);
+}
+
+.btn-outline-info {
+    border: 2px solid rgba(13, 202, 240, 0.5);
+    color: #0dcaf0;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-outline-info:hover {
+    border-color: #0dcaf0;
+    background: rgba(13, 202, 240, 0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(13, 202, 240, 0.2);
+}
+
+.btn-check:checked + .btn-outline-info {
+    background: linear-gradient(135deg, #0dcaf0 0%, #0b8ba6 100%);
+    border-color: #0dcaf0;
+    color: white;
+    box-shadow: 0 6px 20px rgba(13, 202, 240, 0.4);
+    transform: translateY(-2px);
+}
+
+.progress {
+    height: 8px;
+    border-radius: 10px;
+    background: #e9ecef;
+}
+
+.progress-bar {
+    border-radius: 10px;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+}
+
+.file-icon-large {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.7;
+}
+
+.form-switch .form-check-input {
+    width: 3rem;
+    height: 1.5rem;
+    background-color: #cbd5e0;
+    border-color: #cbd5e0;
+}
+
+.form-switch .form-check-input:checked {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+
+.alert-modern {
+    border: none;
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+}
+
+.card-modern {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+}
+
+.card-modern .card-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 2px solid #e9ecef;
+    border-radius: 15px 15px 0 0 !important;
+}
+
+.input-group-text {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 10px 0 0 10px;
+}
+
+.tags-input {
+    position: relative;
+}
+
+.tags-input::after {
+    content: 'Press Enter to add tags';
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.8rem;
+    color: #6c757d;
+    opacity: 0.7;
+}
+
+/* Modern File Picker Styles */
+.modern-file-picker {
+    position: relative;
+}
+
+.file-picker-ui {
+    border: 3px dashed rgba(67, 97, 238, 0.3);
+    border-radius: 20px;
+    padding: 3rem 2rem;
+    text-align: center;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.8) 100%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.file-picker-ui::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, 
+        rgba(67, 97, 238, 0.03) 25%, 
+        transparent 25%, 
+        transparent 75%, 
+        rgba(67, 97, 238, 0.03) 75%);
+    background-size: 40px 40px;
+    animation: slidePattern 25s linear infinite;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+@keyframes slidePattern {
+    0% { background-position: 0 0, 0 0; }
+    100% { background-position: 40px 40px, 40px 40px; }
+}
+
+.file-picker-ui:hover {
+    border-color: rgba(67, 97, 238, 0.6);
+    background: linear-gradient(135deg, rgba(67, 97, 238, 0.08) 0%, rgba(114, 9, 183, 0.05) 100%);
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 12px 35px rgba(67, 97, 238, 0.15);
+}
+
+.file-picker-ui:hover::before {
+    opacity: 1;
+}
+
+.file-icon-wrapper {
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.file-icon-wrapper i {
+    background: linear-gradient(135deg, #4361ee, #7209b7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    transition: transform 0.3s ease;
+}
+
+.file-picker-ui:hover .file-icon-wrapper i {
+    transform: scale(1.1);
+}
+
+.file-picker-content h6, .file-picker-content h5 {
+    color: #2d3748;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.file-picker-content p {
+    color: #718096;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.file-picker-badge {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(67, 97, 238, 0.1);
+    color: #4361ee;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-top: 1rem;
+    border: 1px solid rgba(67, 97, 238, 0.2);
+    transition: all 0.3s ease;
+}
+
+.file-picker-ui:hover .file-picker-badge {
+    background: rgba(67, 97, 238, 0.15);
+    border-color: rgba(67, 97, 238, 0.3);
+    transform: translateY(-2px);
+}
+
+/* Modern Link Input Styles */
+.modern-link-input {
+    position: relative;
+}
+
+.link-input-wrapper {
+    display: flex;
+    align-items: stretch;
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(67, 97, 238, 0.2);
+    border-radius: 15px;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.link-input-wrapper:focus-within {
+    border-color: #4361ee;
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.15), 0 4px 12px rgba(67, 97, 238, 0.1);
+    transform: translateY(-2px);
+}
+
+.link-prefix {
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+    background: linear-gradient(135deg, #4361ee, #7209b7);
+    color: white;
+    font-size: 1.1rem;
+}
+
+.link-input-field {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: 1rem 1.2rem;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #2d3748;
+}
+
+.link-input-field::placeholder {
+    color: #a0aec0;
+    font-style: italic;
+}
+
+.link-actions {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    gap: 0.5rem;
+}
+
+.link-actions .btn {
+    border-radius: 8px;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    transition: all 0.2s ease;
+}
+
+.link-actions .btn:hover {
+    transform: translateY(-1px);
+}
+
+.link-preview {
+    margin-top: 1rem;
+    border-radius: 12px;
+    border: 1px solid rgba(67, 97, 238, 0.2);
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    overflow: hidden;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.link-preview-content {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+}
+
+.preview-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #4361ee, #7209b7);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+.preview-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.preview-title {
+    font-weight: 600;
+    color: #2d3748;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.25rem;
+}
+
+.preview-url {
+    font-size: 0.85rem;
+    color: #718096;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 768px) {
+    .content-form-container {
+        padding: 1rem 0;
+        background: linear-gradient(135deg, #fafbff 0%, #f0f4ff 100%);
+    }
+    
+    .form-card {
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    }
+    
+    .form-header {
+        padding: 2rem 1.5rem;
+    }
+    
+    .form-header h4 {
+        font-size: 1.5rem;
+    }
+    
+    .form-body {
+        padding: 2rem 1.5rem;
+    }
+    
+    .form-section {
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .btn-gradient, .btn-secondary-modern {
+        padding: 0.75rem 1.8rem;
+        font-size: 0.9rem;
+        border-radius: 10px;
+    }
+    
+    .section-title {
+        font-size: 1.05rem;
+    }
+}
+
+/* Enhanced accessibility and micro-interactions */
+.form-control:hover, .form-select:hover {
+    border-color: rgba(67, 97, 238, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+/* Loading state enhancement */
+.form-control:disabled, .form-select:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: rgba(248, 250, 252, 0.5);
+}
+
+/* Focus ring improvement */
+.form-control:focus-visible, .form-select:focus-visible {
+    outline: 2px solid #4361ee;
+    outline-offset: 2px;
+}
+</style>
+
+<div class="content-form-container">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-xl-10 col-lg-12">
+                <div class="form-card">
+                    <div class="form-header">
+                        <h4>
+                            {% if is_edit %}
+                                <i class="fas fa-edit me-3"></i>Edit Content
+                            {% else %}
+                                <i class="fas fa-cloud-upload-alt me-3"></i>Upload New Content
+                            {% endif %}
+                        </h4>
+                        <div class="mt-3">
+                            <small class="opacity-75">
+                                {% if is_edit %}
+                                    Update your educational content and share knowledge with others
+                                {% else %}
+                                    Share your knowledge and help others learn
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                    <div class="form-body">
+                        <form method="POST" enctype="multipart/form-data" id="content_form">
+                            <!-- Basic Information Section -->
+                            <div class="form-section">
+                                <h5 class="section-title">
+                                    <i class="fas fa-info-circle"></i>
+                                    Basic Information
+                                </h5>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="title" class="form-label">
+                                            Title <span class="required-star">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-heading"></i>
+                                            </span>
+                                            <input type="text" class="form-control" id="title" name="title" required
+                                                   {% if content %}value="{{ content.title }}"{% endif %}
+                                                   placeholder="Enter an engaging title">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="type" class="form-label">
+                                            Content Type <span class="required-star">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-layer-group"></i>
+                                            </span>
+                                            <select class="form-select" id="type" name="type" required>
+                                                <option value="">Select type...</option>
+                                                <option value="video" {% if content and content.type == 'video' %}selected{% endif %}>📹 Video</option>
+                                                <option value="document" {% if content and content.type == 'document' %}selected{% endif %}>📄 Document</option>
+                                                <option value="link" {% if content and content.type == 'link' %}selected{% endif %}>🔗 External Link</option>
+                                                <option value="presentation" {% if content and content.type == 'presentation' %}selected{% endif %}>📊 Presentation</option>
+                                                <option value="pdf" {% if content and content.type == 'pdf' %}selected{% endif %}>📑 PDF</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="description" class="form-label">
+                                        Description <span class="required-star">*</span>
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="fas fa-align-left"></i>
+                                        </span>
+                                        <textarea class="form-control" id="description" name="description" rows="4" required
+                                                  placeholder="Describe your content in detail...">{% if content %}{{ content.description }}{% endif %}</textarea>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="difficulty" class="form-label">
+                                            Difficulty Level <span class="required-star">*</span>
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-signal"></i>
+                                            </span>
+                                            <select class="form-select" id="difficulty" name="difficulty" required>
+                                                <option value="">Select level...</option>
+                                                <option value="beginner" {% if content and content.difficulty_level == 'beginner' %}selected{% endif %}>🌱 Beginner</option>
+                                                <option value="intermediate" {% if content and content.difficulty_level == 'intermediate' %}selected{% endif %}>🚀 Intermediate</option>
+                                                <option value="advanced" {% if content and content.difficulty_level == 'advanced' %}selected{% endif %}>⭐ Advanced</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="category_id" class="form-label">
+                                            Category
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-folder"></i>
+                                            </span>
+                                            <select class="form-select" id="category_id" name="category_id">
+                                                <option value="">Select category...</option>
+                                                {% for category in categories %}
+                                                <option value="{{ category.id }}" {% if content and content.category_id == category.id %}selected{% endif %}>{{ category.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="tags" class="form-label">
+                                        Tags
+                                    </label>
+                                    <div class="input-group tags-input">
+                                        <span class="input-group-text">
+                                            <i class="fas fa-tags"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="tags" name="tags"
+                                               value="{% if content %}{{ content.tags or '' }}{% endif %}"
+                                               placeholder="e.g., python, programming, tutorial">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Content File Management Section -->
+                            <div class="form-section">
+                                <h5 class="section-title">
+                                    <i class="fas fa-file-upload"></i>
+                                    Content File Management
+                                </h5>
+                                
+                                {% if is_edit %}
+                                    <!-- Edit Mode: Enhanced current content display -->
+                                    <div class="card-modern">
+                                        <div class="card-header">
+                                            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                                <h6 class="mb-0 d-flex align-items-center">
+                                                    <i class="fas fa-folder-open me-2 text-primary"></i>
+                                                    <span class="fw-bold">Current Content</span>
+                                                </h6>
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    <input type="radio" class="btn-check" name="source_type" id="keep_current" value="current" checked autocomplete="off">
+                                                    <label class="btn btn-outline-secondary rounded-start-pill" for="keep_current">
+                                                        <i class="fas fa-keep me-1"></i>Keep
+                                                    </label>
+                                                    
+                                                    <input type="radio" class="btn-check" name="source_type" id="replace_file" value="file" autocomplete="off">
+                                                    <label class="btn btn-outline-primary" for="replace_file">
+                                                        <i class="fas fa-upload me-1"></i>Replace File
+                                                    </label>
+                                                    
+                                                    <input type="radio" class="btn-check" name="source_type" id="replace_link" value="link" autocomplete="off">
+                                                    <label class="btn btn-outline-info rounded-end-pill" for="replace_link">
+                                                        <i class="fas fa-link me-1"></i>Replace Link
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="current_content_display">
+                                                {% if content.file_url %}
+                                                    {% set file_url = content.file_url %}
+                                                    {% set file_name = file_url.split('/')[-1] %}
+                                                    {% set file_ext = file_name.split('.')[-1].lower() if '.' in file_name else '' %}
+                                                    
+                                                    <div class="content-preview-card p-3 rounded-3 bg-gradient-light">
+                                                        <div class="row align-items-center">
+                                                            <div class="col-md-8">
+                                                                <div class="d-flex align-items-center">
+                                                                    <div class="file-icon-container me-3">
+                                                                        {% if file_ext in ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv'] %}
+                                                                            <i class="fas fa-file-video text-danger file-icon-large"></i>
+                                                                        {% elif file_ext == 'pdf' %}
+                                                                            <i class="fas fa-file-pdf text-danger file-icon-large"></i>
+                                                                        {% elif file_ext in ['doc', 'docx'] %}
+                                                                            <i class="fas fa-file-word text-primary file-icon-large"></i>
+                                                                        {% elif file_ext in ['ppt', 'pptx'] %}
+                                                                            <i class="fas fa-file-powerpoint text-warning file-icon-large"></i>
+                                                                        {% elif file_ext in ['txt', 'rtf'] %}
+                                                                            <i class="fas fa-file-alt text-info file-icon-large"></i>
+                                                                        {% else %}
+                                                                            <i class="fas fa-file text-secondary file-icon-large"></i>
+                                                                        {% endif %}
+                                                                    </div>
+                                                                    
+                                                                    <div class="flex-grow-1">
+                                                                        <h6 class="mb-1 fw-semibold text-truncate" title="{{ file_name }}">
+                                                                            {{ file_name }}
+                                                                        </h6>
+                                                                        <div class="d-flex flex-wrap gap-2">
+                                                                            <span class="badge bg-primary-subtle text-primary">
+                                                                                <i class="fas fa-tag me-1"></i>{{ content.type|title }}
+                                                                            </span>
+                                                                            <span class="badge bg-success-subtle text-success">
+                                                                                <i class="fas fa-check-circle me-1"></i>Available
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <div class="d-flex gap-2 justify-content-end flex-wrap">
+                                                                    {% if file_ext in ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv'] %}
+                                                                        <button type="button" class="btn btn-sm btn-gradient" onclick="toggleVideoPreview()">
+                                                                            <i class="fas fa-play me-1"></i>Preview
+                                                                        </button>
+                                                                    {% endif %}
+                                                                    <a href="{{ file_url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                                        <i class="fas fa-external-link-alt me-1"></i>Open
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- Hidden video preview -->
+                                                        <div id="video_preview_container" style="display: none;" class="mt-3">
+                                                            <div class="ratio ratio-16x9 rounded-3 overflow-hidden">
+                                                                <video controls class="w-100 h-100">
+                                                                    <source src="{{ file_url }}" type="video/mp4">
+                                                                    Your browser does not support video tag.
+                                                                </video>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                {% elif content.external_link %}
+                                                    <div class="content-preview-card p-3 rounded-3 bg-gradient-light">
+                                                        <div class="row align-items-center">
+                                                            <div class="col-md-8">
+                                                                <div class="d-flex align-items-center">
+                                                                    <div class="file-icon-container me-3">
+                                                                        <i class="fas fa-link text-info file-icon-large"></i>
+                                                                    </div>
+                                                                    <div class="flex-grow-1">
+                                                                        <h6 class="mb-1 fw-semibold">External Link</h6>
+                                                                        <div class="d-flex flex-wrap gap-2">
+                                                                            <span class="badge bg-info-subtle text-info">
+                                                                                <i class="fas fa-link me-1"></i>Link Resource
+                                                                            </span>
+                                                                            <span class="badge bg-success-subtle text-success">
+                                                                                <i class="fas fa-check-circle me-1"></i>Active
+                                                                            </span>
+                                                                        </div>
+                                                                        <small class="text-muted d-block mt-1 text-truncate" title="{{ content.external_link }}">
+                                                                            <i class="fas fa-external-link-alt me-1"></i>
+                                                                            {{ content.external_link }}
+                                                                        </small>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <div class="text-end">
+                                                                    <a href="{{ content.external_link }}" target="_blank" class="btn btn-sm btn-gradient">
+                                                                        <i class="fas fa-external-link-alt me-1"></i>Visit Link
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                {% else %}
+                                                    <div class="alert alert-modern alert-warning d-flex align-items-center">
+                                                        <i class="fas fa-exclamation-triangle me-3"></i>
+                                                        <div>
+                                                            <strong>No content file</strong><br>
+                                                            <small class="text-muted">This content doesn't have a file or external link attached yet.</small>
+                                                        </div>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            
+                                            <!-- Replacement options (hidden by default) -->
+                                            <div id="replacement_options" style="display: none;" class="mt-3">
+                                                <!-- File upload area -->
+                                                <div id="file_replacement_area" style="display: none;">
+
+
+
+                                                        
+                                                            <div class="modern-file-picker" id="file_picker_container">
+                                                                <input type="file" class="form-control-lg" id="file" name="file"
+                                                                       accept=".pdf,.doc,.docx,.ppt,.pptx,.mp4,.avi,.mov,.wmv,.flv,.txt"
+                                                                       style="display: none;">
+                                                                        
+                                                                <div class="file-picker-ui" onclick="document.getElementById('file').click()">
+                                                                    <div class="file-icon-wrapper">
+                                                                        <i class="fas fa-cloud-upload-alt fa-3x text-primary"></i>
+                                                                    </div>
+                                                                    <div class="file-picker-content">
+                                                                        <h6 class="mb-2 fw-semibold">Click to browse files</h6>
+                                                                        <p class="text-muted mb-3">Select a new file to replace current content</p>
+                                                                    </div>
+                                                                    <div class="file-picker-badge">
+                                                                        <i class="fas fa-folder-open me-1"></i>
+                                                                        <span id="file_status_text">No file selected</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                    
+                                                    <div class="small text-muted mt-3">
+                                                            <i class="fas fa-info-circle me-1"></i>
+                                                            Supported formats: PDF, DOC, DOCX, PPT, PPTX, MP4, AVI, MOV, WMV, FLV, TXT
+                                                        </div>
+                                                        
+                                                        <!-- Upload Preview with Progress -->
+                                                        <div id="upload_preview" class="mt-4" style="display: none;">
+                                                            <div class="card-modern border-primary">
+                                                                <div class="card-header bg-gradient-light d-flex justify-content-between align-items-center">
+                                                                    <h6 class="mb-0 fw-semibold">
+                                                                        <i class="fas fa-upload text-primary me-2"></i>Upload Preview
+                                                                    </h6>
+                                                                    <span class="badge bg-primary rounded-pill" id="selected_file_name">filename.ext</span>
+                                                                </div>
+                                                                <div class="card-body">
+                                                                    <div class="row">
+                                                                        <div class="col-md-6">
+                                                                            <p class="mb-2">
+                                                                                <strong>File Size:</strong> 
+                                                                                <span id="selected_file_size" class="text-primary">0 MB</span>
+                                                                            </p>
+                                                                            <p class="mb-0">
+                                                                                <strong>Status:</strong> 
+                                                                                <span class="badge bg-warning text-dark">Ready to Upload</span>
+                                                                            </p>
+                                                                        </div>
+                                                                        <div class="col-md-6">
+                                                                            <div class="progress mt-1">
+                                                                                <div id="upload_progress" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" 
+                                                                                     style="width: 0%; min-width: 2em;">
+                                                                                    0%
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    
+                                                                    <!-- File Preview -->
+                                                                    <div id="file_preview_content" class="mt-3"></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Link replacement area -->
+                                                <div id="link_replacement_area" style="display: none;">
+                                                    <div class="border-dashed rounded-4 p-4 text-center bg-light">
+                                                        <i class="fas fa-link fa-4x text-muted mb-3 opacity-75"></i>
+                                                        <h6 class="fw-semibold mb-2">Provide External Link</h6>
+                                                        <p class="text-muted mb-3">Replace current content with an external link</p>
+                                                        
+                                                        <div class="mb-3">
+                                                            <div class="modern-link-input">
+                                                                <div class="link-input-wrapper">
+                                                                    <div class="link-prefix">
+                                                                        <i class="fas fa-link"></i>
+                                                                    </div>
+                                                                    <input type="url" class="form-control form-control-lg link-input-field" 
+                                                                           id="external_link" name="external_link"
+                                                                           {% if content and content.external_link %}value="{{ content.external_link }}"{% endif %}
+                                                                           placeholder="Enter resource URL (YouTube, GitHub, etc.)">
+                                                                    <div class="link-actions">
+                                                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearLinkInput()" title="Clear">
+                                                                            <i class="fas fa-times"></i>
+                                                                        </button>
+                                                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="testLinkInput()" title="Test Link">
+                                                                            <i class="fas fa-external-link-alt"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="link-preview" id="link_preview" style="display: none;">
+                                                                    <div class="link-preview-content">
+                                                                        <div class="preview-icon">
+                                                                            <i class="fas fa-globe"></i>
+                                                                        </div>
+                                                                        <div class="preview-info">
+                                                                            <div class="preview-title" id="preview_title">Loading...</div>
+                                                                            <div class="preview-url" id="preview_url">...</div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                    
+                                                    <div class="small text-muted mt-3">
+                                                            <i class="fas fa-info-circle me-1"></i>
+                                                            Provide a link to external resource (YouTube, GitHub, etc.)
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <!-- Upload Mode: Modern file/link selector -->
+                                    <div class="card-modern">
+                                        <div class="card-header">
+                                            <div class="btn-group w-100" role="group">
+                                                <input type="radio" class="btn-check" name="source_type" id="upload_file" value="file" checked autocomplete="off">
+                                                <label class="btn btn-outline-primary rounded-start-pill flex-fill" for="upload_file">
+                                                    <i class="fas fa-upload me-2"></i>Upload File
+                                                </label>
+                                                
+                                                <input type="radio" class="btn-check" name="source_type" id="external_link_option" value="link" autocomplete="off">
+                                                <label class="btn btn-outline-info rounded-end-pill flex-fill" for="external_link_option">
+                                                    <i class="fas fa-link me-2"></i>External Link
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <!-- File upload area -->
+                                            <div id="file_upload_area">
+                                                <div class="modern-file-picker" id="upload_file_picker_container">
+                                                    <input type="file" class="form-control-lg" id="file" name="file"
+                                                           accept=".pdf,.doc,.docx,.ppt,.pptx,.mp4,.avi,.mov,.wmv,.flv,.txt"
+                                                           style="display: none;">
+                                                                        
+                                                    <div class="file-picker-ui" onclick="document.getElementById('file').click()">
+                                                        <div class="file-icon-wrapper">
+                                                            <i class="fas fa-cloud-upload-alt fa-3x text-primary"></i>
+                                                        </div>
+                                                        <div class="file-picker-content">
+                                                            <h6 class="mb-2 fw-semibold">Click to browse files</h6>
+                                                            <p class="text-muted mb-3">Share your knowledge by uploading educational content</p>
+                                                        </div>
+                                                        <div class="file-picker-badge">
+                                                            <i class="fas fa-folder-open me-1"></i>
+                                                            <span id="upload_file_status_text">No file selected</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                    
+                                                    <div class="alert alert-modern alert-info">
+                                                        <i class="fas fa-info-circle me-2"></i>
+                                                        <strong>Supported formats:</strong> PDF, DOC, DOCX, PPT, PPTX, MP4, AVI, MOV, WMV, FLV, TXT
+                                                    </div>
+                                                    
+                                                    <!-- Upload Preview with Progress -->
+                                                    <div id="upload_preview" class="mt-4" style="display: none;">
+                                                        <div class="card-modern border-primary">
+                                                            <div class="card-header bg-gradient-light d-flex justify-content-between align-items-center">
+                                                                <h6 class="mb-0 fw-semibold">
+                                                                    <i class="fas fa-upload text-primary me-2"></i>Upload Preview
+                                                                </h6>
+                                                                <span class="badge bg-primary rounded-pill" id="selected_file_name">filename.ext</span>
+                                                            </div>
+                                                            <div class="card-body">
+                                                                <div class="row">
+                                                                    <div class="col-md-6">
+                                                                        <p class="mb-2">
+                                                                            <strong>File Size:</strong> 
+                                                                            <span id="selected_file_size" class="text-primary">0 MB</span>
+                                                                        </p>
+                                                                        <p class="mb-0">
+                                                                            <strong>Status:</strong> 
+                                                                            <span class="badge bg-warning text-dark">Ready to Upload</span>
+                                                                        </p>
+                                                                    </div>
+                                                                    <div class="col-md-6">
+                                                                        <div class="progress mt-1">
+                                                                            <div id="upload_progress" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" 
+                                                                                 style="width: 0%; min-width: 2em;">
+                                                                                0%
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                <!-- File Preview -->
+                                                                <div id="file_preview_content" class="mt-3"></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Link input area -->
+                                            <div id="link_input_area" style="display: none;">
+                                                <div class="border-dashed rounded-4 p-5 text-center bg-light">
+                                                    <i class="fas fa-link fa-5x text-muted mb-4 opacity-75"></i>
+                                                    <h5 class="fw-semibold mb-3">Provide External Link</h5>
+                                                    <p class="text-muted mb-4">Share knowledge from external resources like YouTube, GitHub, etc.</p>
+                                                    
+                                                    <div class="mb-4">
+                                                        <div class="modern-link-input">
+                                                            <div class="link-input-wrapper">
+                                                                <div class="link-prefix">
+                                                                    <i class="fas fa-link"></i>
+                                                                </div>
+                                                                <input type="url" class="form-control form-control-lg link-input-field" 
+                                                                       id="external_link" name="external_link"
+                                                                       placeholder="Enter resource URL (YouTube, GitHub, etc.)">
+                                                                <div class="link-actions">
+                                                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearLinkInput()" title="Clear">
+                                                                        <i class="fas fa-times"></i>
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="testLinkInput()" title="Test Link">
+                                                                        <i class="fas fa-external-link-alt"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            <div class="link-preview" id="link_preview" style="display: none;">
+                                                                <div class="link-preview-content">
+                                                                    <div class="preview-icon">
+                                                                        <i class="fas fa-globe"></i>
+                                                                    </div>
+                                                                    <div class="preview-info">
+                                                                        <div class="preview-title" id="preview_title">Loading...</div>
+                                                                        <div class="preview-url" id="preview_url">...</div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="alert alert-modern alert-info">
+                                                        <i class="fas fa-lightbulb me-2"></i>
+                                                        <strong>Tip:</strong> You can share links to educational videos, articles, or any useful online resources
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Publishing Options Section -->
+                            <div class="form-section" id="publishing_options_section">
+                                <h5 class="section-title">
+                                    <i class="fas fa-cog"></i>
+                                    Publishing Options
+                                </h5>
+                                
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="publish_now" name="publish_now" 
+                                                   {% if not is_edit %}checked{% elif content and content.is_published %}checked{% endif %}>
+                                            <label class="form-check-label fw-semibold" for="publish_now">
+                                                <i class="fas fa-globe me-2"></i>Publish immediately
+                                            </label>
+                                        </div>
+                                        <small class="text-muted ms-4">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            {% if is_edit %}
+                                                {% if content and content.is_published %}
+                                                    Content is currently published. Uncheck to save as draft.
+                                                {% else %}
+                                                    Content is currently a draft. Check to publish now.
+                                                {% endif %}
+                                            {% else %}
+                                                Uncheck to save as draft and publish later
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="text-end">
+                                            <div class="badge {% if not is_edit or (content and content.is_published) %}bg-success{% else %}bg-warning text-dark{% endif %} rounded-pill px-3 py-2">
+                                                <i class="fas {% if not is_edit or (content and content.is_published) %}fa-eye{% else %}fa-eye-slash{% endif %} me-1"></i>
+                                                {% if is_edit %}
+                                                    {% if content and content.is_published %}Published{% else %}Draft{% endif %}
+                                                {% else %}
+                                                    Will Publish
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% if is_edit %}
+                            <!-- Content Statistics (Edit Mode Only) -->
+                            <div class="form-section">
+                                <h5 class="section-title">
+                                    <i class="fas fa-chart-bar"></i>
+                                    Content Statistics
+                                </h5>
+                                
+                                <div class="row g-3">
+                                    <div class="col-md-3 col-6">
+                                        <div class="stat-card p-3 rounded-3 bg-gradient-primary text-white text-center">
+                                            <i class="fas fa-eye fa-2x mb-2 opacity-75"></i>
+                                            <h6 class="mb-1 fw-bold">{{ content.view_count or 0 }}</h6>
+                                            <small class="opacity-75">Views</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 col-6">
+                                        <div class="stat-card p-3 rounded-3 bg-gradient-success text-white text-center">
+                                            <i class="fas fa-download fa-2x mb-2 opacity-75"></i>
+                                            <h6 class="mb-1 fw-bold">{{ content.download_count or 0 }}</h6>
+                                            <small class="opacity-75">Downloads</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 col-6">
+                                        <div class="stat-card p-3 rounded-3 bg-gradient-warning text-white text-center">
+                                            <i class="fas fa-star fa-2x mb-2 opacity-75"></i>
+                                            <h6 class="mb-1 fw-bold">{% if content.average_rating %}{{ "%.1f"|format(content.average_rating) }}{% else %}0.0{% endif %}</h6>
+                                            <small class="opacity-75">Rating</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 col-6">
+                                        <div class="stat-card p-3 rounded-3 bg-gradient-info text-white text-center">
+                                            <i class="fas fa-calendar fa-2x mb-2 opacity-75"></i>
+                                            <h6 class="mb-1 fw-bold small">{{ content.created_at|format_datetime('%Y-%m-%d') if content.created_at else 'Unknown' }}</h6>
+                                            <small class="opacity-75">Created</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <!-- reCAPTCHA Section (Upload Mode Only) -->
+                            <div class="form-section">
+                                <h5 class="section-title">
+                                    <i class="fas fa-shield-alt"></i>
+                                    Security Verification
+                                </h5>
+                                
+                                <div class="text-center p-4 bg-light rounded-3">
+                                    <i class="fas fa-robot fa-3x text-muted mb-3"></i>
+                                    <h6 class="mb-2">Verify You're Human</h6>
+                                    <p class="text-muted mb-3">Please complete the captcha below to proceed with uploading</p>
+                                    
+                                    <!-- reCAPTCHA placeholder -->
+                                    <div class="g-recaptcha" data-sitekey="YOUR_RECAPTCHA_SITE_KEY" 
+                                         style="display: inline-block; border: 2px dashed #667eea; padding: 20px; border-radius: 10px; background: white;">
+                                        <span class="text-muted">reCAPTCHA would appear here</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Action Buttons Section -->
+                            <div class="form-section bg-gradient-light mb-0">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" name="submit" class="btn btn-gradient btn-lg" id="submit_btn">
+                                            {% if is_edit %}
+                                                <i class="fas fa-save me-2"></i>Update Content
+                                            {% else %}
+                                                <i class="fas fa-cloud-upload-alt me-2"></i>Upload Content
+                                            {% endif %}
+                                        </button>
+                                        
+                                        {% if is_edit %}
+                                        <a href="{{ url_for('content.view', content_id=content.id) }}" class="btn btn-secondary-modern btn-lg">
+                                            <i class="fas fa-times me-2"></i>Cancel
+                                        </a>
+                                        {% else %}
+                                        <a href="{{ url_for('content.browse') }}" class="btn btn-secondary-modern btn-lg">
+                                            <i class="fas fa-times me-2"></i>Cancel
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="text-muted small">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        {% if is_edit %}
+                                            All changes will be saved immediately
+                                        {% else %}
+                                            Content will be processed after upload
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Additional styles for new components */
+.bg-gradient-light {
+    background: linear-gradient(135deg, rgba(248, 250, 252, 0.9) 0%, rgba(241, 245, 249, 0.8) 100%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #4361ee 0%, #3f37c9 50%, #7209b7 100%);
+}
+
+.bg-gradient-success {
+    background: linear-gradient(135deg, #06ffa5 0%, #00b4d8 100%);
+}
+
+.bg-gradient-warning {
+    background: linear-gradient(135deg, #ffbe0b 0%, #fb5607 100%);
+}
+
+.bg-gradient-info {
+    background: linear-gradient(135deg, #4cc9f0 0%, #3a0ca3 100%);
+}
+
+.stat-card {
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+}
+
+.content-preview-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.content-preview-card:hover {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.file-icon-container {
+    flex-shrink: 0;
+}
+
+.ratio-16x9 {
+    aspect-ratio: 16/9;
+}
+
+.btn-lg {
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.form-check-input:checked {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+
+.badge.rounded-pill {
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .stat-card {
+        margin-bottom: 1rem;
+    }
+    
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+    
+    .btn-lg {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Global variables
+const IS_EDIT_MODE = {{ 'true' if is_edit else 'false' }};
+let uploadedFileInfo = null; // Store uploaded file info
+
+// Toggle between content source options
+function toggleContentType() {
+    const sourceType = document.querySelector('input[name="source_type"]:checked').value;
+    
+    if (IS_EDIT_MODE) {
+        // Edit mode logic
+        const currentDisplay = document.getElementById('current_content_display');
+        const replacementOptions = document.getElementById('replacement_options');
+        const fileReplacementArea = document.getElementById('file_replacement_area');
+        const linkReplacementArea = document.getElementById('link_replacement_area');
+        
+        // Hide all replacement areas first
+        if (replacementOptions) replacementOptions.style.display = 'none';
+        if (fileReplacementArea) fileReplacementArea.style.display = 'none';
+        if (linkReplacementArea) linkReplacementArea.style.display = 'none';
+        
+        if (sourceType === 'current') {
+            // Show current content only
+            if (currentDisplay) currentDisplay.style.display = 'block';
+            document.getElementById('external_link').removeAttribute('required');
+            document.getElementById('file').removeAttribute('required');
+        } else if (sourceType === 'file') {
+            // Show current content + file replacement
+            if (currentDisplay) currentDisplay.style.display = 'none';
+            if (replacementOptions) replacementOptions.style.display = 'block';
+            if (fileReplacementArea) fileReplacementArea.style.display = 'block';
+            document.getElementById('external_link').removeAttribute('required');
+            document.getElementById('file').setAttribute('required', 'required');
+        } else if (sourceType === 'link') {
+            // Show current content + link replacement
+            if (currentDisplay) currentDisplay.style.display = 'none';
+            if (replacementOptions) replacementOptions.style.display = 'block';
+            if (linkReplacementArea) linkReplacementArea.style.display = 'block';
+            document.getElementById('external_link').setAttribute('required', 'required');
+            document.getElementById('file').removeAttribute('required');
+        }
+    } else {
+        // Upload mode logic
+        const fileUploadArea = document.getElementById('file_upload_area');
+        const linkInputArea = document.getElementById('link_input_area');
+        
+        // Hide all areas first
+        if (fileUploadArea) fileUploadArea.style.display = 'none';
+        if (linkInputArea) linkInputArea.style.display = 'none';
+        
+        if (sourceType === 'file') {
+            if (fileUploadArea) fileUploadArea.style.display = 'block';
+            document.getElementById('external_link').removeAttribute('required');
+            document.getElementById('file').setAttribute('required', 'required');
+        } else {
+            if (linkInputArea) linkInputArea.style.display = 'block';
+            document.getElementById('external_link').setAttribute('required', 'required');
+            document.getElementById('file').removeAttribute('required');
+            // Hide upload preview when switching to link
+            document.getElementById('upload_preview').style.display = 'none';
+        }
+    }
+}
+
+// Toggle video preview (for edit mode)
+function toggleVideoPreview() {
+    const previewContainer = document.getElementById('video_preview_container');
+    if (previewContainer) {
+        previewContainer.style.display = previewContainer.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
+// Handle publishing options toggle
+function togglePublishingOptions() {
+    const publishNow = document.getElementById('publish_now');
+    const publishingSection = document.getElementById('publishing_options_section');
+    if (!publishNow || !publishingSection) return;
+    
+    const statusBadge = publishingSection.querySelector('.badge.rounded-pill');
+    const helpText = publishingSection.querySelector('.text-muted.ms-4');
+    
+    if (!statusBadge || !helpText) return;
+    
+    const isPublished = publishNow.checked;
+    
+    // Update status badge
+    if (isPublished) {
+        statusBadge.className = 'badge bg-success rounded-pill px-3 py-2';
+        statusBadge.innerHTML = '<i class="fas fa-eye me-1"></i>' + 
+                                (IS_EDIT_MODE ? 'Published' : 'Will Publish');
+    } else {
+        statusBadge.className = 'badge bg-warning text-dark rounded-pill px-3 py-2';
+        statusBadge.innerHTML = '<i class="fas fa-eye-slash me-1"></i>' + 
+                                (IS_EDIT_MODE ? 'Draft' : 'Will Save as Draft');
+    }
+    
+    // Update help text
+    if (IS_EDIT_MODE) {
+        helpText.innerHTML = '<i class="fas fa-info-circle me-1"></i>' +
+                            (isPublished 
+                                ? 'Content is currently published. Uncheck to save as draft.'
+                                : 'Content is currently a draft. Check to publish now.');
+    } else {
+        helpText.innerHTML = '<i class="fas fa-info-circle me-1"></i>' +
+                            (isPublished 
+                                ? 'Content will be published immediately.'
+                                : 'Content will be saved as draft and can be published later.');
+    }
+}
+
+// File upload with progress preview
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const previewContainer = document.getElementById('upload_preview');
+    const progressBar = document.getElementById('upload_progress');
+    const fileName = document.getElementById('selected_file_name');
+    const fileSize = document.getElementById('selected_file_size');
+    const previewContent = document.getElementById('file_preview_content');
+    
+    // Auto-detect content type based on file extension
+    const fileNameLower = file.name.toLowerCase();
+    let detectedType = 'document'; // default
+    let message = '';
+    
+    if (fileNameLower.endsWith('.mp4') || fileNameLower.endsWith('.avi') || 
+        fileNameLower.endsWith('.mov') || fileNameLower.endsWith('.wmv') || 
+        fileNameLower.endsWith('.flv') || fileNameLower.endsWith('.webm') || 
+        fileNameLower.endsWith('.mkv')) {
+        detectedType = 'video';
+        message = 'Video file detected';
+    } else if (fileNameLower.endsWith('.pdf')) {
+        detectedType = 'pdf';
+        message = 'PDF document detected';
+    } else if (fileNameLower.endsWith('.ppt') || fileNameLower.endsWith('.pptx') || 
+               fileNameLower.endsWith('.odp') || fileNameLower.endsWith('.key')) {
+        detectedType = 'presentation';
+        message = 'Presentation file detected';
+    } else if (fileNameLower.endsWith('.doc') || fileNameLower.endsWith('.docx')) {
+        // Word documents can be either documents or presentations
+        const typeSelector = document.getElementById('type');
+        if (typeSelector.value === '' || typeSelector.value === 'document') {
+            detectedType = 'document';
+            message = 'Word document detected (can also be used as presentation)';
+        } else if (typeSelector.value === 'presentation') {
+            detectedType = 'presentation';
+            message = 'Word document detected for presentation use';
+        } else {
+            detectedType = 'document';
+            message = 'Word document detected (can also be used as presentation)';
+        }
+    }
+    
+    // Update content type selector if it's empty or doesn't match
+    const typeSelector = document.getElementById('type');
+    if (typeSelector.value === '' || (typeSelector.value === 'link' && detectedType !== 'link')) {
+        typeSelector.value = detectedType;
+        showNotification(`Content type automatically set to: ${detectedType}. ${message}`, 'info');
+    }
+    
+    // Show preview container
+    previewContainer.style.display = 'block';
+    
+    // Update file info
+    fileName.textContent = file.name;
+    fileSize.textContent = formatFileSize(file.size);
+    
+    // Reset progress
+    progressBar.style.width = '0%';
+    progressBar.textContent = '0%';
+    progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated';
+    
+    // Create file preview
+    createFilePreview(file, previewContent);
+}
+
+// Create file preview based on file type
+function createFilePreview(file, container) {
+    const fileType = file.type;
+    const fileName = file.name.toLowerCase();
+    const fileUrl = URL.createObjectURL(file);
+    container.innerHTML = '';
+    
+    // Unified link-based preview for all file types
+    let iconClass = 'fas fa-file';
+    let iconColor = 'text-secondary';
+    let fileTypeText = 'File';
+    
+    if (fileType.startsWith('video/') || fileName.endsWith('.mp4') || fileName.endsWith('.avi') || 
+        fileName.endsWith('.mov') || fileName.endsWith('.wmv') || fileName.endsWith('.flv') ||
+        fileName.endsWith('.webm') || fileName.endsWith('.mkv')) {
+        iconClass = 'fas fa-video';
+        iconColor = 'text-danger';
+        fileTypeText = 'Video';
+    } else if (fileType === 'application/pdf' || fileName.endsWith('.pdf')) {
+        iconClass = 'fas fa-file-pdf';
+        iconColor = 'text-danger';
+        fileTypeText = 'PDF Document';
+    } else if (fileType.includes('document') || fileType.includes('word') || 
+               fileName.endsWith('.doc') || fileName.endsWith('.docx')) {
+        iconClass = 'fas fa-file-word';
+        iconColor = 'text-primary';
+        fileTypeText = 'Word Document';
+    } else if (fileType.includes('presentation') || 
+               fileName.endsWith('.ppt') || fileName.endsWith('.pptx') || 
+               fileName.endsWith('.odp') || fileName.endsWith('.key')) {
+        iconClass = 'fas fa-file-powerpoint';
+        iconColor = 'text-warning';
+        fileTypeText = 'Presentation';
+    }
+    
+    const previewHTML = `
+        <div class="text-center p-4 bg-light rounded border">
+            <i class="${iconClass} fa-4x ${iconColor} mb-3 opacity-75"></i>
+            <h6 class="mb-2">${fileTypeText}</h6>
+            <p class="mb-3 text-muted small">${file.name}</p>
+            <a href="${fileUrl}" target="_blank" class="btn btn-primary btn-sm">
+                <i class="fas fa-external-link-alt me-2"></i>Open File in New Tab
+            </a>
+        </div>
+    `;
+    
+    container.innerHTML = previewHTML;
+}
+
+// Format file size
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Update current preview with newly uploaded file (Edit Mode Only)
+function updateCurrentPreview(fileInfo, contentType) {
+    if (!IS_EDIT_MODE) return;
+    
+    const dynamicPreview = document.getElementById('dynamic_preview');
+    if (!dynamicPreview) return;
+    
+    let previewHTML = '';
+    const fileUrl = fileInfo.file_url;
+    const fileName = fileInfo.original_name || fileInfo.filename;
+    const fileExt = fileName.split('.').pop().toLowerCase();
+    
+    if (contentType === 'video' || ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv'].includes(fileExt)) {
+        previewHTML = `
+            <div class="video-preview-container">
+                <video controls style="width: 100%; max-height: 300px; border-radius: 8px;">
+                    <source src="${fileUrl}" type="video/mp4">
+                    Your browser does not support video tag.
+                </video>
+                <p class="mt-2 text-muted">
+                    <i class="fas fa-file-video"></i> New video file (${fileName})
+                    <br><small class="text-success">File uploaded successfully</small>
+                </p>
+            </div>
+        `;
+    } else if (contentType === 'pdf' || fileExt === 'pdf') {
+        previewHTML = `
+            <div class="document-preview">
+                <div class="text-center p-3 bg-light rounded">
+                    <i class="fas fa-file-pdf fa-3x text-danger mb-2"></i>
+                    <p class="mb-0 text-muted">PDF Document: ${fileName}</p>
+                    <a href="${fileUrl}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
+                        <i class="fas fa-external-link-alt me-1"></i>Open PDF
+                    </a>
+                    <br><small class="text-success">File uploaded successfully</small>
+                </div>
+            </div>
+        `;
+    } else if (contentType === 'document' && ['doc', 'docx'].includes(fileExt)) {
+        previewHTML = `
+            <div class="document-preview">
+                <div class="text-center p-3 bg-light rounded">
+                    <i class="fas fa-file-word fa-3x text-primary mb-2"></i>
+                    <p class="mb-0 text-muted">Word Document: ${fileName}</p>
+                    <a href="${fileUrl}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
+                        <i class="fas fa-download me-1"></i>Download Document
+                    </a>
+                    <br><small class="text-success">File uploaded successfully</small>
+                </div>
+            </div>
+        `;
+    } else if (contentType === 'presentation' && ['ppt', 'pptx'].includes(fileExt)) {
+        previewHTML = `
+            <div class="presentation-preview">
+                <div class="text-center p-3 bg-light rounded">
+                    <i class="fas fa-file-powerpoint fa-3x text-warning mb-2"></i>
+                    <p class="mb-0 text-muted">Presentation: ${fileName}</p>
+                    <a href="${fileUrl}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
+                        <i class="fas fa-download me-1"></i>Download Presentation
+                    </a>
+                    <br><small class="text-success">File uploaded successfully</small>
+                </div>
+            </div>
+        `;
+    } else {
+        // Generic file preview
+        let iconClass = 'fas fa-file';
+        let iconColor = 'text-secondary';
+        
+        if (fileExt === 'pdf') {
+            iconClass = 'fas fa-file-pdf';
+            iconColor = 'text-danger';
+        } else if (['doc', 'docx'].includes(fileExt)) {
+            iconClass = 'fas fa-file-word';
+            iconColor = 'text-primary';
+        } else if (['ppt', 'pptx'].includes(fileExt)) {
+            iconClass = 'fas fa-file-powerpoint';
+            iconColor = 'text-warning';
+        } else if (['txt', 'rtf'].includes(fileExt)) {
+            iconClass = 'fas fa-file-alt';
+            iconColor = 'text-info';
+        }
+        
+        previewHTML = `
+            <div class="file-preview">
+                <div class="text-center p-3 bg-light rounded">
+                    <i class="${iconClass} fa-3x ${iconColor} mb-2"></i>
+                    <p class="mb-0 text-muted">File: ${fileName}</p>
+                    <a href="${fileUrl}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
+                        <i class="fas fa-external-link-alt me-1"></i>Open File
+                    </a>
+                    <br><small class="text-success">File uploaded successfully</small>
+                </div>
+            </div>
+        `;
+    }
+    
+    dynamicPreview.innerHTML = previewHTML;
+}
+
+// Async file upload with real progress tracking
+async function uploadFileAsync(file, content_type) {
+    const progressBar = document.getElementById('upload_progress');
+    const formData = new FormData();
+    
+    formData.append('file', file);
+    formData.append('content_type', content_type);
+    
+    try {
+        // Create XMLHttpRequest for progress tracking
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            
+            // Track upload progress
+            xhr.upload.addEventListener('progress', function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = (e.loaded / e.total) * 100;
+                    progressBar.style.width = percentComplete + '%';
+                    progressBar.textContent = Math.round(percentComplete) + '%';
+                }
+            });
+            
+            // Handle completion
+            xhr.addEventListener('load', function() {
+                console.log('Upload response status:', xhr.status);
+                console.log('Upload response text:', xhr.responseText);
+                
+                if (xhr.status === 200) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.success) {
+                            progressBar.className = 'progress-bar bg-success';
+                            progressBar.textContent = 'Upload Complete';
+                            resolve(response);
+                        } else {
+                            progressBar.className = 'progress-bar bg-danger';
+                            progressBar.textContent = 'Upload Failed';
+                            reject(new Error(response.error || 'Upload failed'));
+                        }
+                    } catch (err) {
+                        progressBar.className = 'progress-bar bg-danger';
+                        progressBar.textContent = 'Upload Failed';
+                        console.error('Parse error:', err);
+                        reject(err);
+                    }
+                } else {
+                    progressBar.className = 'progress-bar bg-danger';
+                    progressBar.textContent = `Error: HTTP ${xhr.status}`;
+                    console.error('HTTP error:', xhr.status, xhr.responseText);
+                    reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText}`));
+                }
+            });
+            
+            // Handle errors
+            xhr.addEventListener('error', function() {
+                progressBar.className = 'progress-bar bg-danger';
+                progressBar.textContent = 'Network Error';
+                console.error('Network error during upload');
+                reject(new Error('Network error'));
+            });
+            
+            // Handle timeout
+            xhr.addEventListener('timeout', function() {
+                progressBar.className = 'progress-bar bg-danger';
+                progressBar.textContent = 'Upload Timeout';
+                console.error('Upload timeout');
+                reject(new Error('Upload timeout'));
+            });
+            
+            // Configure and send request
+            xhr.open('POST', '/content/upload-file');
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            // Add timeout (5 minutes for large files)
+            xhr.timeout = 5 * 60 * 1000;
+            xhr.send(formData);
+        });
+        
+    } catch (err) {
+        progressBar.className = 'progress-bar bg-danger';
+        progressBar.textContent = 'Setup Error';
+        console.error('Upload setup error:', err);
+        throw err;
+    }
+}
+
+// Show notification
+function showNotification(message, type = 'info') {
+    const alertDiv = document.createElement('div');
+    
+    // Set gradient background based on type
+    let gradientBg = '';
+    let icon = '';
+    let textColor = 'text-white';
+    
+    switch(type) {
+        case 'success':
+            gradientBg = 'bg-gradient-success';
+            icon = 'fa-check-circle';
+            break;
+        case 'danger':
+            gradientBg = 'bg-gradient-danger';
+            icon = 'fa-exclamation-triangle';
+            break;
+        case 'warning':
+            gradientBg = 'bg-gradient-warning';
+            icon = 'fa-exclamation-circle';
+            break;
+        case 'info':
+        default:
+            gradientBg = 'bg-gradient-primary';
+            icon = 'fa-info-circle';
+            break;
+    }
+    
+    alertDiv.className = `alert alert-modern ${gradientBg} ${textColor} alert-dismissible fade show position-fixed`;
+    alertDiv.style.top = '20px';
+    alertDiv.style.right = '20px';
+    alertDiv.style.zIndex = '9999';
+    alertDiv.style.minWidth = '350px';
+    alertDiv.style.maxWidth = '450px';
+    alertDiv.style.border = 'none';
+    alertDiv.style.borderRadius = '15px';
+    alertDiv.style.boxShadow = '0 10px 30px rgba(0,0,0,0.2)';
+    alertDiv.style.animation = 'slideInRight 0.3s ease-out';
+    
+    alertDiv.innerHTML = `
+        <div class="d-flex align-items-start">
+            <i class="fas ${icon} fa-2x me-3 opacity-75"></i>
+            <div class="flex-grow-1">
+                <strong class="d-block mb-1">
+                    ${type.charAt(0).toUpperCase() + type.slice(1)}
+                </strong>
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white ms-3" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // Add animation styles if not already added
+    if (!document.querySelector('#notification-animations')) {
+        const style = document.createElement('style');
+        style.id = 'notification-animations';
+        style.textContent = `
+            @keyframes slideInRight {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            
+            @keyframes slideOutRight {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+            
+            .alert-modern {
+                animation: slideInRight 0.3s ease-out;
+            }
+            
+            .alert-modern.removing {
+                animation: slideOutRight 0.3s ease-out;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    // Auto remove after 5 seconds with animation
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.classList.add('removing');
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.parentNode.removeChild(alertDiv);
+                }
+            }, 300);
+        }
+    }, 5000);
+}
+
+// Enhanced file picker functionality
+function handleModernFileSelect(event) {
+    const file = event.target.files[0];
+    const statusText = document.getElementById(IS_EDIT_MODE ? 'file_status_text' : 'upload_file_status_text');
+    
+    if (file) {
+        // Update status text
+        if (statusText) {
+            statusText.textContent = `Selected: ${file.name}`;
+            statusText.parentElement.style.background = 'rgba(67, 97, 238, 0.2)';
+            statusText.parentElement.style.borderColor = 'rgba(67, 97, 238, 0.4)';
+        }
+        
+        // Call original file handler
+        handleFileSelect(event);
+    } else {
+        // Reset status text
+        if (statusText) {
+            statusText.textContent = 'No file selected';
+            statusText.parentElement.style.background = 'rgba(67, 97, 238, 0.1)';
+            statusText.parentElement.style.borderColor = 'rgba(67, 97, 238, 0.2)';
+        }
+    }
+}
+
+// Link input functionality
+function clearLinkInput() {
+    const linkInput = document.getElementById('external_link');
+    const preview = document.getElementById('link_preview');
+    
+    if (linkInput) {
+        linkInput.value = '';
+        if (preview) {
+            preview.style.display = 'none';
+        }
+    }
+}
+
+async function testLinkInput() {
+    const linkInput = document.getElementById('external_link');
+    const preview = document.getElementById('link_preview');
+    const previewTitle = document.getElementById('preview_title');
+    const previewUrl = document.getElementById('preview_url');
+    
+    if (!linkInput || !linkInput.value.trim()) {
+        showNotification('Please enter a URL to test', 'warning');
+        return;
+    }
+    
+    const url = linkInput.value.trim();
+    
+    // Show preview loading state
+    if (preview && previewTitle && previewUrl) {
+        preview.style.display = 'block';
+        previewTitle.textContent = 'Loading...';
+        previewUrl.textContent = url;
+    }
+    
+    try {
+        // For demo purposes, we'll just show the URL
+        // In a real implementation, you might fetch metadata
+        setTimeout(() => {
+            if (previewTitle) {
+                const domain = new URL(url).hostname;
+                previewTitle.textContent = `External Resource - ${domain}`;
+            }
+        }, 500);
+        
+        // Test link in new window
+        window.open(url, '_blank');
+    } catch (error) {
+        showNotification('Invalid URL format', 'danger');
+        if (preview) {
+            preview.style.display = 'none';
+        }
+    }
+}
+
+// Link input real-time preview
+function handleLinkInput(event) {
+    const linkInput = event.target;
+    const preview = document.getElementById('link_preview');
+    const previewTitle = document.getElementById('preview_title');
+    const previewUrl = document.getElementById('preview_url');
+    
+    if (linkInput.value.trim()) {
+        if (preview && previewTitle && previewUrl) {
+            preview.style.display = 'block';
+            try {
+                const url = new URL(linkInput.value.trim());
+                const domain = url.hostname;
+                previewTitle.textContent = `External Resource - ${domain}`;
+                previewUrl.textContent = linkInput.value.trim();
+            } catch (e) {
+                previewTitle.textContent = 'Invalid URL';
+                previewUrl.textContent = linkInput.value.trim();
+            }
+        }
+    } else {
+        if (preview) {
+            preview.style.display = 'none';
+        }
+    }
+}
+
+// Initialize page functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize content type toggle
+    document.querySelectorAll('input[name="source_type"]').forEach(radio => {
+        radio.addEventListener('change', toggleContentType);
+    });
+    
+    // Initialize on page load
+    toggleContentType();
+    
+    // File selection handler
+    const fileInput = document.getElementById('file');
+    if (fileInput) {
+        fileInput.addEventListener('change', handleModernFileSelect);
+    }
+    
+    // Link input handlers
+    const linkInput = document.getElementById('external_link');
+    if (linkInput) {
+        linkInput.addEventListener('input', handleLinkInput);
+        linkInput.addEventListener('blur', handleLinkInput);
+    }
+    
+    // Publishing options handler
+    const publishNow = document.getElementById('publish_now');
+    if (publishNow) {
+        publishNow.addEventListener('change', togglePublishingOptions);
+        // Initialize on page load
+        togglePublishingOptions();
+    }
+    
+    // Enhanced form validation and async upload
+    const form = document.getElementById('content_form');
+    if (form) {
+        form.addEventListener('submit', async function(e) {
+            const sourceType = document.querySelector('input[name="source_type"]:checked').value;
+            const contentFile = document.getElementById('file').files[0];
+            const externalLink = document.getElementById('external_link').value;
+            const contentType = document.getElementById('type').value;
+            
+            // Check if user is logged in (basic validation)
+            if (!IS_EDIT_MODE && !window.location.pathname.includes('/upload')) {
+                showNotification('Please ensure you are logged in before uploading.', 'warning');
+                return false;
+            }
+            
+            if (sourceType === 'file' && !contentFile && !uploadedFileInfo) {
+                e.preventDefault();
+                showNotification('Please select a file to upload.', 'warning');
+                return false;
+            } else if (sourceType === 'link' && !externalLink) {
+                e.preventDefault();
+                showNotification('Please provide an external link.', 'warning');
+                return false;
+            }
+            
+            // If we have a file to upload
+            if (sourceType === 'file' && contentFile && !uploadedFileInfo) {
+                e.preventDefault();
+                
+                // Validate file size
+                const maxSize = 100 * 1024 * 1024; // 100MB
+                if (contentFile.size > maxSize) {
+                    showNotification('File size exceeds 100MB limit.', 'danger');
+                    return false;
+                }
+                
+                // Validate content type
+                if (!contentType || contentType === '') {
+                    showNotification('Please select a content type for the file.', 'warning');
+                    return false;
+                }
+                
+                console.log('Starting upload:', {
+                    fileName: contentFile.name,
+                    fileSize: contentFile.size,
+                    contentType: contentType,
+                    sourceType: sourceType,
+                    isEditMode: IS_EDIT_MODE
+                });
+                
+                // Add loading state to submit button
+                const submitBtn = document.getElementById('submit_btn');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
+                
+                try {
+                    // Upload file asynchronously
+                    uploadedFileInfo = await uploadFileAsync(contentFile, contentType);
+                    
+                    // Add hidden fields for the uploaded file info
+                    let fileUrlField = document.getElementById('uploaded_file_url');
+                    let fileNameField = document.getElementById('uploaded_filename');
+                    
+                    if (!fileUrlField) {
+                        fileUrlField = document.createElement('input');
+                        fileUrlField.type = 'hidden';
+                        fileUrlField.name = 'uploaded_file_url';
+                        fileUrlField.id = 'uploaded_file_url';
+                        form.appendChild(fileUrlField);
+                        
+                        fileNameField = document.createElement('input');
+                        fileNameField.type = 'hidden';
+                        fileNameField.name = 'uploaded_filename';
+                        fileNameField.id = 'uploaded_filename';
+                        form.appendChild(fileNameField);
+                    }
+                    
+                    fileUrlField.value = uploadedFileInfo.file_url;
+                    fileNameField.value = uploadedFileInfo.filename;
+                    
+                    // Update current preview in edit mode
+                    if (IS_EDIT_MODE) {
+                        updateCurrentPreview(uploadedFileInfo, contentType);
+                    }
+                    
+                    // Update button text
+                    submitBtn.innerHTML = IS_EDIT_MODE ? 
+                        '<i class="fas fa-check me-2"></i>Ready to Update' : 
+                        '<i class="fas fa-check me-2"></i>Ready to Submit';
+                    submitBtn.disabled = false;
+                    
+                    showNotification('File uploaded successfully! You can now submit the form.', 'success');
+                    
+                } catch (err) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                    showNotification('Upload failed: ' + err.message, 'danger');
+                }
+                
+                return false;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

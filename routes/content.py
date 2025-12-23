@@ -13,20 +13,41 @@ load_dotenv()
 def allowed_file(filename, content_type):
     """Check if file is allowed for content type"""
     ALLOWED_EXTENSIONS = {
-        'video': {'mp4', 'avi', 'mov', 'wmv', 'flv'},
-        'document': {'pdf', 'doc', 'docx', 'txt'},
-        'presentation': {'ppt', 'pptx', 'pdf'},
+        'video': {'mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv'},
+        'document': {'pdf', 'doc', 'docx', 'txt', 'rtf', 'odt'},
+        'presentation': {'ppt', 'pptx', 'pdf', 'odp', 'key', 'doc', 'docx'},  # Allow Word docs for presentations
         'pdf': {'pdf'}
     }
+    
+    # Handle case where content_type is 'link' - files shouldn't be uploaded for links
+    if content_type == 'link':
+        return False
     
     if '.' not in filename:
         return False
     
-    ext = filename.rsplit('.', 1)[1].lower()
+    # Get the file extension (everything after the last dot)
+    ext = filename.rsplit('.', 1)[1].lower().strip()
+    
+    # Remove any trailing spaces or special characters that might have been introduced
+    ext = ''.join(c for c in ext if c.isalnum())
+    
+    # Debug logging with Unicode-safe representation
+    current_app.logger.debug(f'Checking file: {repr(filename)}, extension: {ext}, content_type: {content_type}')
     
     if content_type in ALLOWED_EXTENSIONS:
-        return ext in ALLOWED_EXTENSIONS[content_type]
+        allowed_exts = ALLOWED_EXTENSIONS[content_type]
+        current_app.logger.debug(f'Available extensions for {content_type}: {allowed_exts}')
+        current_app.logger.debug(f'Extension {ext} in allowed set: {ext in allowed_exts}')
+        return ext in allowed_exts
     
+    # If content_type is not recognized, allow common file types
+    COMMON_EXTENSIONS = {'pdf', 'doc', 'docx', 'txt', 'ppt', 'pptx', 'mp4', 'avi', 'mov', 'wmv'}
+    if ext in COMMON_EXTENSIONS:
+        current_app.logger.debug(f'Content type {content_type} not recognized, but extension {ext} is common - allowing')
+        return True
+    
+    current_app.logger.debug(f'Extension {ext} not allowed for content type {content_type}')
     return False
 
 content_bp = Blueprint('content', __name__)
@@ -90,14 +111,14 @@ def browse():
         
         # Build query
         # Admins can see all content (including unpublished) for moderation
-        if session.get('role') == 'admin':
+        if session.get('user_role') == 'admin':
             where_conditions = []  # Admins see all content
         else:
             where_conditions = ["c.is_published = 1"]  # Others only see published content
         params = []
         
         # Debug: log the query building process
-        current_app.logger.debug(f"User role: {session.get('role')}")
+        current_app.logger.debug(f"User role: {session.get('user_role')}")
         current_app.logger.debug(f"Where conditions: {where_conditions}")
         
         if search_query:
@@ -198,8 +219,8 @@ def upload():
         return redirect(url_for('auth.login'))
     
     # Check if user is instructor or admin
-    if session.get('role') not in ['instructor', 'admin']:
-        flash('Only instructors can upload content', 'error')
+    if session.get('user_role') not in ['instructor', 'admin']:
+        flash('Only instructors and admins can upload content', 'error')
         # Redirect based on user role
         if session.get('user_role') == 'admin':
             return redirect(url_for('admin.dashboard'))
@@ -228,6 +249,7 @@ def upload():
             tags = request.form.getlist('tags')
             external_link = request.form.get('external_link')
             source_type = request.form.get('source_type')
+            publish_now = request.form.get('publish_now') == 'checked'
             
             # Validation
             if not all([title, content_type, difficulty]):
@@ -236,36 +258,45 @@ def upload():
             
             file_url = external_link
             
-            # Handle file upload if source_type is 'file'
+            # Handle file upload (both sync and async)
             if source_type == 'file':
-                if 'file' not in request.files:
-                    flash('No file selected', 'error')
-                    return render_template('content/upload.html', categories=categories)
+                # Check for async uploaded file first
+                uploaded_file_url = request.form.get('uploaded_file_url')
+                uploaded_filename = request.form.get('uploaded_filename')
                 
-                file = request.files['file']
-                if file.filename == '':
-                    flash('No file selected', 'error')
-                    return render_template('content/upload.html', categories=categories)
-                
-                if file and allowed_file(file.filename, content_type):
-                    # Create uploads directory if it doesn't exist
-                    upload_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads')
-                    if not os.path.exists(upload_folder):
-                        os.makedirs(upload_folder)
-                    
-                    # Generate unique filename
-                    filename = secure_filename(file.filename)
-                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
-                    unique_filename = timestamp + filename
-                    
-                    file_path = os.path.join(upload_folder, unique_filename)
-                    file.save(file_path)
-                    
-                    # Create URL for the file
-                    file_url = url_for('static', filename=f'uploads/{unique_filename}')
+                if uploaded_file_url and uploaded_filename:
+                    # File was uploaded asynchronously
+                    file_url = uploaded_file_url
                 else:
-                    flash('File type not allowed for this content type', 'error')
-                    return render_template('content/upload.html', categories=categories)
+                    # Traditional synchronous upload
+                    if 'file' not in request.files:
+                        flash('No file selected', 'error')
+                        return render_template('content/upload.html', categories=categories)
+                    
+                    file = request.files['file']
+                    if file.filename == '':
+                        flash('No file selected', 'error')
+                        return render_template('content/upload.html', categories=categories)
+                    
+                    if file and allowed_file(file.filename, content_type):
+                        # Create uploads directory if it doesn't exist
+                        upload_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads')
+                        if not os.path.exists(upload_folder):
+                            os.makedirs(upload_folder)
+                        
+                        # Generate unique filename
+                        filename = secure_filename(file.filename)
+                        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
+                        unique_filename = timestamp + filename
+                        
+                        file_path = os.path.join(upload_folder, unique_filename)
+                        file.save(file_path)
+                        
+                        # Create URL for the file
+                        file_url = f'/uploads/{unique_filename}'
+                    else:
+                        flash('File type not allowed for this content type', 'error')
+                        return render_template('content/upload.html', categories=categories)
             
             # Insert content
             tags_json = str(tags) if tags else None
@@ -278,7 +309,7 @@ def upload():
             """, (
                 title, description, content_type, difficulty, external_link, file_url,
                 session['user_id'], category_id or None, tags_json,
-                1, datetime.now(), datetime.now()  # SQLite uses 1 for boolean
+                1 if publish_now else 0, datetime.now(), datetime.now()  # SQLite uses 1 for boolean
             ))
             
             content_id = cursor.lastrowid
@@ -291,8 +322,13 @@ def upload():
             """, (session['user_id'], 'UPLOADED', 'content', content_id, datetime.now()))
             connection.commit()
             
-            flash('Content uploaded successfully!', 'success')
-            return redirect(url_for('content.view', content_id=content_id))
+            # Redirect based on publish status
+            if publish_now:
+                flash('Content published successfully!', 'success')
+                return redirect(url_for('content.view', content_id=content_id))
+            else:
+                flash('Content saved as draft successfully!', 'success')
+                return redirect(url_for('content.browse'))
         
         # GET request - show upload form
         cursor.execute("SELECT id, name FROM categories ORDER BY name")
@@ -301,11 +337,69 @@ def upload():
         cursor.close()
         connection.close()
         
-        return render_template('content/upload.html', categories=categories)
+        return render_template('content/content_form.html', 
+                            is_edit=False, 
+                            categories=categories)
     
     except Exception as err:
         flash(f'Error uploading content: {err}', 'error')
         return redirect(url_for('dashboard'))
+
+@content_bp.route('/upload-file', methods=['POST'])
+def upload_file():
+    """Handle async file upload with progress tracking"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if session.get('user_role') not in ['instructor', 'admin']:
+        return jsonify({'error': 'Permission denied'}), 403
+    
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    content_type = request.form.get('content_type', 'video')
+    
+    # Debug logging
+    current_app.logger.debug(f'Upload request - filename: {file.filename}, content_type: {content_type}')
+    current_app.logger.debug(f'File extension: {file.filename.rsplit(".", 1)[1].lower() if "." in file.filename else "none"}')
+    current_app.logger.debug(f'allowed_file check result: {allowed_file(file.filename, content_type)}')
+    
+    if not allowed_file(file.filename, content_type):
+        return jsonify({'error': f'File type not allowed for content type: {content_type}. File: {file.filename}'}), 400
+    
+    try:
+        # Create uploads directory if it doesn't exist
+        upload_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads')
+        if not os.path.exists(upload_folder):
+            os.makedirs(upload_folder)
+        
+        # Generate unique filename
+        filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
+        unique_filename = timestamp + filename
+        
+        file_path = os.path.join(upload_folder, unique_filename)
+        file.save(file_path)
+        
+        # Create URL for the file
+        file_url = f'/uploads/{unique_filename}'
+        
+        # Return success response with file info
+        return jsonify({
+            'success': True,
+            'file_url': file_url,
+            'filename': unique_filename,
+            'original_name': file.filename,
+            'size': os.path.getsize(file_path)
+        })
+        
+    except Exception as err:
+        current_app.logger.error(f'File upload error: {err}')
+        return jsonify({'error': 'Upload failed'}), 500
 
 @content_bp.route('/<int:content_id>')
 def view(content_id):
@@ -602,7 +696,7 @@ def delete_feedback(content_id, feedback_id):
         
         # Check permissions: admin can delete any feedback, users can delete their own
         current_user_id = session['user_id']
-        is_admin = session.get('role') == 'admin'
+        is_admin = session.get('user_role') == 'admin'
         is_feedback_owner = feedback['feedback_user_id'] == current_user_id
         
         if not (is_admin or is_feedback_owner):
@@ -656,7 +750,7 @@ def edit(content_id):
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
-    if session.get('role') not in ['instructor', 'admin']:
+    if session.get('user_role') not in ['instructor', 'admin']:
         flash('You do not have permission to edit content', 'error')
         return redirect(url_for('content.view', content_id=content_id))
     
@@ -683,7 +777,7 @@ def edit(content_id):
             return redirect(url_for('content.browse'))
         
         # Check if user has permission to edit this content
-        if session.get('role') != 'admin' and content['uploaded_by'] != session['user_id']:
+        if session.get('user_role') != 'admin' and content['uploaded_by'] != session['user_id']:
             flash('You do not have permission to edit this content', 'error')
             return redirect(url_for('content.view', content_id=content_id))
         
@@ -700,6 +794,8 @@ def edit(content_id):
             category_id = request.form.get('category_id')
             tags = request.form.get('tags')
             external_link = request.form.get('external_link')
+            source_type = request.form.get('source_type')
+            publish_now = request.form.get('publish_now') == 'checked'
             
             # Validation
             if not title:
@@ -708,33 +804,134 @@ def edit(content_id):
                                     content=content, 
                                     categories=categories)
             
+            # Handle file upload based on source type
+            file_url = None
+            if source_type == 'file':
+                # Check for async uploaded file first
+                uploaded_file_url = request.form.get('uploaded_file_url')
+                uploaded_filename = request.form.get('uploaded_filename')
+                
+                if uploaded_file_url and uploaded_filename:
+                    # File was uploaded asynchronously
+                    file_url = uploaded_file_url
+                else:
+                    # Traditional synchronous upload (fallback)
+                    if 'file' in request.files:
+                        file = request.files['file']
+                        if file.filename != '' and allowed_file(file.filename, content_type):
+                            # Create uploads directory if it doesn't exist
+                            upload_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads')
+                            if not os.path.exists(upload_folder):
+                                os.makedirs(upload_folder)
+                            
+                            filename = secure_filename(file.filename)
+                            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
+                            unique_filename = timestamp + filename
+                            
+                            file_path = os.path.join(upload_folder, unique_filename)
+                            file.save(file_path)
+                            
+                            file_url = f'/uploads/{unique_filename}'
+            elif source_type == 'link':
+                file_url = None  # Will use external_link
+            elif source_type == 'current':
+                # Keep current file - no changes to file_url/external_link
+                file_url = content['file_url']
+                external_link = content['external_link']
+            
             # Update content
             cursor.execute("""
                 UPDATE content 
                 SET title = ?, description = ?, type = ?, difficulty_level = ?,
-                    category_id = ?, external_link = ?, tags = ?, updated_at = ?
+                    category_id = ?, external_link = ?, file_url = ?, tags = ?, 
+                    is_published = ?, updated_at = ?
                 WHERE id = ?
             """, (
                 title, description, content_type, difficulty, 
-                category_id or None, external_link, tags, 
-                datetime.now(), content_id
+                category_id or None, external_link, file_url, tags, 
+                1 if publish_now else 0, datetime.now(), content_id
             ))
             
             connection.commit()
             cursor.close()
             connection.close()
             
-            flash('Content updated successfully!', 'success')
-            return redirect(url_for('content.view', content_id=content_id))
+            # Redirect based on publish status
+            if publish_now:
+                flash('Content updated and published successfully!', 'success')
+                return redirect(url_for('content.view', content_id=content_id))
+            else:
+                flash('Content updated and saved as draft successfully!', 'success')
+                return redirect(url_for('content.browse'))
         
         cursor.close()
         connection.close()
-        return render_template('content/edit.html', 
+        return render_template('content/content_form.html', 
+                            is_edit=True, 
                             content=content, 
                             categories=categories)
         
     except Exception as err:
         flash(f'Error editing content: {err}', 'error')
+        return redirect(url_for('content.view', content_id=content_id))
+
+@content_bp.route('/<int:content_id>/delete', methods=['POST'])
+def delete_content(content_id):
+    """Delete content"""
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    
+    if session.get('user_role') not in ['admin']:
+        flash('Only administrators can delete content', 'error')
+        return redirect(url_for('content.view', content_id=content_id))
+    
+    connection = get_db_connection()
+    if not connection:
+        flash('Database error', 'error')
+        return redirect(url_for('content.view', content_id=content_id))
+    
+    try:
+        cursor = connection.cursor()
+        
+        # Get content details for logging
+        cursor.execute("SELECT title, uploaded_by FROM content WHERE id = ?", (content_id,))
+        content = cursor.fetchone()
+        
+        if not content:
+            flash('Content not found', 'error')
+            return redirect(url_for('content.browse'))
+        
+        # Check if user has permission to delete this content
+        if session.get('user_role') != 'admin' and content['uploaded_by'] != session['user_id']:
+            flash('You do not have permission to delete this content', 'error')
+            return redirect(url_for('content.view', content_id=content_id))
+        
+        # Delete related feedback
+        cursor.execute("DELETE FROM content_feedback WHERE content_id = ?", (content_id,))
+        
+        # Delete related user activities
+        cursor.execute("DELETE FROM user_activities WHERE content_id = ?", (content_id,))
+        
+        # Delete the content
+        cursor.execute("DELETE FROM content WHERE id = ?", (content_id,))
+        
+        connection.commit()
+        
+        # Log the deletion
+        cursor.execute("""
+            INSERT INTO system_logs (user_id, action, resource_type, resource_id, created_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, (session['user_id'], 'DELETED', 'content', content_id, datetime.now()))
+        connection.commit()
+        
+        cursor.close()
+        connection.close()
+        
+        flash(f'Content "{content["title"]}" has been deleted successfully!', 'success')
+        return redirect(url_for('content.browse'))
+        
+    except Exception as err:
+        flash(f'Error deleting content: {err}', 'error')
         return redirect(url_for('content.view', content_id=content_id))
 
 @content_bp.route('/api/search')

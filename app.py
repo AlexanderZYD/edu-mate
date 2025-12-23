@@ -231,24 +231,33 @@ def index():
 
 @app.route('/dashboard')
 def dashboard():
-    """Main dashboard for students only"""
+    """Main dashboard route - redirects to appropriate dashboard based on role"""
     print(f"\n{'='*80}")
-    print(f"DASHBOARD ROUTE CALLED for user_id: {session.get('user_id')}")
+    print(f"DASHBOARD ROUTE CALLED for user_id: {session.get('user_id')}, role: {session.get('user_role')}")
     print(f"{'='*80}")
     
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     
-    # Only allow students to access the dashboard
+    # Redirect to appropriate dashboard based on user role
+    if session.get('user_role') == 'admin':
+        print("Redirecting admin to admin dashboard")
+        return redirect(url_for('admin.dashboard'))
+    elif session.get('user_role') == 'instructor':
+        print("Redirecting instructor to profile")
+        return redirect(url_for('user.profile'))
+    elif session.get('user_role') == 'student':
+        print("Showing student dashboard")
+        # Continue to student dashboard logic
+        pass
+    else:
+        print("Unknown role, redirecting to index")
+        return redirect(url_for('index'))
+    
+    # Only students can access this dashboard
     if session.get('user_role') != 'student':
-        flash('Access denied. Dashboard is only available for students.', 'error')
-        # Redirect based on user role
-        if session.get('user_role') == 'admin':
-            return redirect(url_for('admin.dashboard'))
-        elif session.get('user_role') == 'instructor':
-            return redirect(url_for('user.profile'))
-        else:
-            return redirect(url_for('index'))
+        flash('Access denied. This dashboard is only available for students.', 'error')
+        return redirect(url_for('index'))
     
     connection = get_db_connection()
     if not connection:
@@ -458,6 +467,11 @@ def dashboard():
     finally:
         if connection:
             connection.close()
+
+@app.errorhandler(413)
+def too_large(error):
+    flash('File too large. Maximum file size is 100MB.', 'error')
+    return redirect(url_for('content.upload'))
 
 @app.errorhandler(404)
 def not_found(error):
