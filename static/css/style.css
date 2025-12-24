@@ -536,3 +536,667 @@ footer {
 .shadow-lg {
     box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175) !important;
 }
+
+/* Management Buttons Styling */
+.btn-management {
+    border: 2px solid transparent;
+    border-radius: 12px;
+    padding: 1.5rem 1rem;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    min-height: 140px;
+}
+
+.btn-management::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
+    transition: left 0.6s ease;
+    z-index: 1;
+}
+
+.btn-management:hover::before {
+    left: 100%;
+}
+
+.btn-outline-primary:hover {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #0056b3 100%);
+    border-color: var(--primary-color);
+    color: white;
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 12px 30px rgba(13, 110, 253, 0.25);
+}
+
+.btn-outline-danger:hover {
+    background: linear-gradient(135deg, var(--danger-color) 0%, #b02a37 100%);
+    border-color: var(--danger-color);
+    color: white;
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 12px 30px rgba(220, 53, 69, 0.25);
+}
+
+.btn-management .fa-2x {
+    transition: transform 0.3s ease;
+}
+
+.btn-management:hover .fa-2x {
+    transform: scale(1.1);
+}
+
+/* Management Section Enhancement */
+.management-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-top: 1rem;
+    border: 1px solid rgba(13, 110, 253, 0.1);
+}
+
+.management-section h6 {
+    color: var(--dark-color);
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+/* Tooltip styling for management buttons */
+.btn-management[data-bs-toggle="tooltip"] {
+    position: relative;
+}
+
+/* Loading states for management buttons */
+.btn-management.loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.btn-management.loading .fa-2x {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(0.95); }
+}
+
+/* Responsive adjustments for management buttons */
+@media (max-width: 768px) {
+    .btn-management {
+        min-height: 120px;
+        padding: 1rem 0.75rem;
+    }
+    
+    .btn-management .fa-2x {
+        font-size: 1.5rem;
+    }
+    
+    .btn-management .fw-bold {
+        font-size: 0.9rem;
+    }
+    
+    .btn-management small {
+        font-size: 0.7rem;
+    }
+}
+
+/* Reviews Tab Styling */
+.feedback-item {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    min-height: 80px;
+}
+
+.feedback-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(13, 110, 253, 0.05), transparent);
+    transition: left 0.6s ease;
+}
+
+.feedback-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    border-color: var(--primary-color);
+}
+
+.feedback-item:hover::before {
+    left: 100%;
+}
+
+/* Feedback header with user info and rating */
+.feedback-item .d-flex.justify-content-between {
+    flex-wrap: nowrap;
+    align-items: flex-start !important;
+}
+
+.feedback-item .d-flex.align-items-center {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.feedback-item h6 {
+    font-weight: 600;
+    color: var(--dark-color);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Feedback content styling */
+.feedback-content {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+}
+
+.feedback-content p {
+    line-height: 1.6;
+    color: var(--dark-color);
+    margin: 0;
+}
+
+/* Feedback actions container */
+.feedback-actions {
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+/* Feedback meta information */
+.feedback-meta {
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    padding-top: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.feedback-delete-btn {
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+.feedback-delete-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+    transition: left 0.5s ease;
+}
+
+.feedback-delete-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: all 0.4s ease;
+}
+
+.feedback-item:hover .feedback-delete-btn {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.feedback-delete-btn:hover {
+    transform: scale(1.15) translateY(-2px);
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    border-color: #c0392b;
+    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+}
+
+.feedback-delete-btn:hover::before {
+    left: 100%;
+}
+
+.feedback-delete-btn:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+.feedback-delete-btn:active::after {
+    width: 100%;
+    height: 100%;
+}
+
+.feedback-delete-btn .fa-trash-alt {
+    color: #ffffff;
+    font-size: 0.85rem;
+    z-index: 2;
+    position: relative;
+    transition: transform 0.3s ease;
+}
+
+.feedback-delete-btn:hover .fa-trash-alt {
+    transform: rotate(10deg);
+}
+
+/* Review rating stars in feedback */
+.feedback-item .rating {
+    font-size: 0.9rem;
+}
+
+.feedback-item .rating .fa-star {
+    margin-right: 2px;
+    transition: transform 0.2s ease;
+}
+
+.feedback-item .rating .fa-star:hover {
+    transform: scale(1.2);
+}
+
+/* Empty reviews state */
+.reviews-empty {
+    padding: 3rem 2rem;
+    text-align: center;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 16px;
+    border: 2px dashed #dee2e6;
+}
+
+.reviews-empty .fa-comment-slash {
+    opacity: 0.5;
+    margin-bottom: 1rem;
+}
+
+/* Review count badge animation */
+#reviews-tab {
+    position: relative;
+}
+
+.review-count-updated {
+    animation: pulse 0.6s ease-in-out;
+}
+
+@keyframes reviewCountUpdate {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); color: var(--success-color); }
+    100% { transform: scale(1); }
+}
+
+/* Review loading state */
+.reviews-loading {
+    text-align: center;
+    padding: 2rem;
+    color: var(--primary-color);
+}
+
+.reviews-loading .fa-spinner {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+/* Delete Confirmation Modal Styling */
+.delete-confirm-modal {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.delete-confirm-modal .modal-content {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+.delete-confirm-modal .modal-header {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    border: none;
+    padding: 1.5rem;
+}
+
+.delete-confirm-modal .modal-body {
+    padding: 2rem;
+    text-align: center;
+}
+
+.delete-confirm-modal .modal-body .fa-exclamation-triangle {
+    font-size: 3rem;
+    color: #ffc107;
+    margin-bottom: 1rem;
+    animation: warningPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes warningPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+.delete-confirm-modal .modal-footer {
+    border: none;
+    padding: 1rem 1.5rem 1.5rem;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.delete-confirm-modal .btn-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    border: none;
+    padding: 0.75rem 2rem;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.delete-confirm-modal .btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(220, 53, 69, 0.3);
+}
+
+.delete-confirm-modal .btn-secondary {
+    background: linear-gradient(135deg, #6c757d 0%, #545b62 100%);
+    border: none;
+    padding: 0.75rem 2rem;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.delete-confirm-modal .btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(108, 117, 125, 0.3);
+}
+
+/* Delete success animation */
+.feedback-item.deleting {
+    animation: slideOutAndFade 0.5s ease-out forwards;
+}
+
+@keyframes slideOutAndFade {
+    0% {
+        transform: translateX(0);
+        opacity: 1;
+        max-height: 200px;
+    }
+    50% {
+        transform: translateX(-20px);
+        opacity: 0.8;
+    }
+    100% {
+        transform: translateX(100%);
+        opacity: 0;
+        max-height: 0;
+        margin: 0;
+        padding: 0;
+    }
+}
+
+/* Responsive adjustments for feedback layout */
+@media (max-width: 768px) {
+    .feedback-delete-btn {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .feedback-delete-btn .fa-trash-alt {
+        font-size: 0.75rem;
+    }
+    
+    .feedback-item .d-flex.justify-content-between {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .feedback-item .d-flex.align-items-center {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .feedback-actions {
+        margin-left: 0;
+        align-self: flex-end;
+    }
+    
+    .feedback-content p {
+        font-size: 0.9rem;
+    }
+    
+    .delete-confirm-modal .modal-body .fa-exclamation-triangle {
+        font-size: 2rem;
+    }
+    
+    .delete-confirm-modal .modal-footer {
+        flex-direction: column;
+    }
+    
+    .delete-confirm-modal .btn-danger,
+    .delete-confirm-modal .btn-secondary {
+        width: 100%;
+        margin: 0.25rem 0;
+    }
+}
+
+/* Long comment handling */
+.feedback-content p {
+    display: -webkit-box;
+    -webkit-line-clamp: 6;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    position: relative;
+    max-height: 9.6em; /* 6 lines * 1.6em line-height */
+    transition: max-height 0.3s ease;
+}
+
+.feedback-content.expanded p {
+    -webkit-line-clamp: unset;
+    max-height: none;
+}
+
+/* Show more/less button for long comments */
+.feedback-content.show-more-btn::after {
+    content: '';
+    display: block;
+    height: 2em;
+    background: linear-gradient(transparent, rgba(248, 249, 250, 0.9));
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+}
+
+.feedback-toggle-btn {
+    background: none;
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 0.5rem;
+}
+
+.feedback-toggle-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-1px);
+}
+
+/* Ensure proper spacing when no comment exists */
+/* Modern browsers with :has() support */
+@supports selector(:has(*)) {
+    .feedback-item:has(.feedback-content:empty) {
+        min-height: auto;
+    }
+    
+    .feedback-item:not(:has(.feedback-content)) {
+        min-height: 60px;
+    }
+}
+
+/* Fallback for browsers without :has() support */
+.feedback-item {
+    min-height: 80px;
+}
+
+.feedback-item .feedback-content:not(:empty) {
+    min-height: auto;
+}
+
+/* File Upload and Preview Components */
+.upload-preview-container {
+    border: 2px dashed var(--primary-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(13, 110, 253, 0.05) 0%, rgba(13, 110, 253, 0.02) 100%);
+    transition: all 0.3s ease;
+}
+
+.upload-preview-container:hover {
+    border-color: var(--success-color);
+    background: linear-gradient(135deg, rgba(25, 135, 84, 0.05) 0%, rgba(25, 135, 84, 0.02) 100%);
+}
+
+.current-content-preview {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f8f9fa;
+}
+
+.video-preview-container video,
+.document-preview iframe,
+.presentation-preview iframe {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+.file-preview .alert-info {
+    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+    border-left: 4px solid var(--info-color);
+}
+
+.link-preview .alert-info {
+    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+    border-left: 4px solid var(--info-color);
+}
+
+.progress {
+    height: 8px;
+    border-radius: 4px;
+    background-color: #e9ecef;
+    overflow: hidden;
+}
+
+.progress-bar {
+    transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.progress-bar-striped {
+    background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
+    background-size: 1rem 1rem;
+}
+
+.progress-bar-animated {
+    animation: progress-bar-stripes 1s linear infinite;
+}
+
+@keyframes progress-bar-stripes {
+    0% {
+        background-position: 1rem 0;
+    }
+    100% {
+        background-position: 0 0;
+    }
+}
+
+.card.border-primary {
+    border-width: 2px;
+}
+
+.card.border-primary .card-header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #0056b3 100%);
+    color: white;
+}
+
+.card.border-primary .badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* File type icons */
+.fa-file-video {
+    color: #dc3545;
+}
+
+.fa-file-pdf {
+    color: #dc3545;
+}
+
+.fa-file-word {
+    color: #2b579a;
+}
+
+.fa-file-powerpoint {
+    color: #d24726;
+}
+
+.fa-file {
+    color: #6c757d;
+}
+
+/* Loading states for file upload */
+.uploading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    z-index: 10;
+}
+
+.uploading-overlay .fa-spinner {
+    font-size: 2rem;
+    color: var(--primary-color);
+}
+
+/* Mobile file upload adjustments */
+@media (max-width: 768px) {
+    .upload-preview-container {
+        padding: 1rem;
+    }
+    
+    .card.border-primary .card-header {
+        padding: 0.75rem;
+        font-size: 0.9rem;
+    }
+    
+    .progress {
+        height: 6px;
+    }
+}
