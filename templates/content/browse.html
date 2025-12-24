@@ -20,6 +20,201 @@
     top: 10px;
     right: 10px;
 }
+
+/* Enhanced Search & Filter Styles */
+.search-filter-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.search-filter-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+}
+
+.search-filter-card .card-header {
+    background: transparent;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.search-filter-card .card-body {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 0 0 15px 15px;
+}
+
+.search-filter-card h6 {
+    color: white;
+    font-weight: 600;
+    margin: 0;
+}
+
+.form-group label {
+    font-weight: 500;
+    color: #2c3e50;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+.form-control {
+    border: 2px solid #e1e8ed;
+    border-radius: 10px;
+    padding: 12px 15px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    background-color: #f8f9fa;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    background-color: white;
+}
+
+.form-control:hover {
+    border-color: #a0aec0;
+    background-color: white;
+}
+
+.form-select.form-control {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px 12px;
+    padding-right: 40px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.2);
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(108, 117, 125, 0.3);
+}
+
+/* Enhanced input group styling */
+.search-input-group {
+    position: relative;
+}
+
+.search-input-group .form-control {
+    padding-left: 45px;
+}
+
+.search-input-group::before {
+    content: "\f002";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #a0aec0;
+    z-index: 10;
+    font-size: 1rem;
+}
+
+/* Filter pills for better mobile experience */
+@media (max-width: 768px) {
+    .search-filter-card .card-body {
+        padding: 20px 15px;
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .btn {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    .col-md-2:last-child .btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+}
+
+/* Animation for search input */
+.form-control {
+    animation: slideInUp 0.5s ease-out;
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Custom scrollbar for select elements */
+select.form-control::-webkit-scrollbar {
+    width: 8px;
+}
+
+select.form-control::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+select.form-control::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 10px;
+}
+
+select.form-control::-webkit-scrollbar-thumb:hover {
+    background: #5a67d8;
+}
+
+/* Enhanced filter chips */
+.filter-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    margin: 2px;
+    font-weight: 500;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    transition: all 0.3s ease;
+}
+
+.filter-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
 </style>
 {% endblock %}
 
@@ -43,24 +238,30 @@
     </div>
 
     <!-- Search and Filters -->
-    <div class="card shadow mb-4">
+    <div class="card shadow mb-4 search-filter-card">
         <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">Search & Filter</h6>
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-search mr-2"></i>Search & Filter
+            </h6>
         </div>
         <div class="card-body">
             <form method="GET" action="{{ url_for('content.browse') }}">
                 <div class="row">
                     <div class="col-md-4">
-                        <div class="form-group">
-                            <label for="q">Search</label>
+                        <div class="form-group search-input-group">
+                            <label for="q">
+                                <i class="fas fa-search mr-1"></i>Search
+                            </label>
                             <input type="text" class="form-control" id="q" name="q" 
                                    value="{{ request.args.get('q', '') }}"
-                                   placeholder="Search content...">
+                                   placeholder="Search for content, titles, or keywords...">
                         </div>
                     </div>
                     <div class="col-md-2">
                         <div class="form-group">
-                            <label for="category">Category</label>
+                            <label for="category">
+                                <i class="fas fa-folder mr-1"></i>Category
+                            </label>
                             <select class="form-control" id="category" name="category">
                                 <option value="">All Categories</option>
                                 {% for category in categories %}
@@ -74,36 +275,58 @@
                     </div>
                     <div class="col-md-2">
                         <div class="form-group">
-                            <label for="difficulty">Difficulty</label>
+                            <label for="difficulty">
+                                <i class="fas fa-layer-group mr-1"></i>Difficulty
+                            </label>
                             <select class="form-control" id="difficulty" name="difficulty">
                                 <option value="">All Levels</option>
-                                <option value="beginner" {% if request.args.get('difficulty') == 'beginner' %}selected{% endif %}>Beginner</option>
-                                <option value="intermediate" {% if request.args.get('difficulty') == 'intermediate' %}selected{% endif %}>Intermediate</option>
-                                <option value="advanced" {% if request.args.get('difficulty') == 'advanced' %}selected{% endif %}>Advanced</option>
+                                <option value="beginner" {% if request.args.get('difficulty') == 'beginner' %}selected{% endif %}>
+                                    <i class="fas fa-seedling"></i> Beginner
+                                </option>
+                                <option value="intermediate" {% if request.args.get('difficulty') == 'intermediate' %}selected{% endif %}>
+                                    <i class="fas fa-fire"></i> Intermediate
+                                </option>
+                                <option value="advanced" {% if request.args.get('difficulty') == 'advanced' %}selected{% endif %}>
+                                    <i class="fas fa-rocket"></i> Advanced
+                                </option>
                             </select>
                         </div>
                     </div>
                     <div class="col-md-2">
                         <div class="form-group">
-                            <label for="type">Type</label>
+                            <label for="type">
+                                <i class="fas fa-file-alt mr-1"></i>Type
+                            </label>
                             <select class="form-control" id="type" name="type">
                                 <option value="">All Types</option>
-                                <option value="video" {% if request.args.get('type') == 'video' %}selected{% endif %}>Video</option>
-                                <option value="document" {% if request.args.get('type') == 'document' %}selected{% endif %}>Document</option>
-                                <option value="quiz" {% if request.args.get('type') == 'quiz' %}selected{% endif %}>Quiz</option>
-                                <option value="presentation" {% if request.args.get('type') == 'presentation' %}selected{% endif %}>Presentation</option>
-                                <option value="link" {% if request.args.get('type') == 'link' %}selected{% endif %}>Link</option>
+                                <option value="video" {% if request.args.get('type') == 'video' %}selected{% endif %}>
+                                    <i class="fas fa-video"></i> Video
+                                </option>
+                                <option value="document" {% if request.args.get('type') == 'document' %}selected{% endif %}>
+                                    <i class="fas fa-file-pdf"></i> Document
+                                </option>
+                                <option value="quiz" {% if request.args.get('type') == 'quiz' %}selected{% endif %}>
+                                    <i class="fas fa-question-circle"></i> Quiz
+                                </option>
+                                <option value="presentation" {% if request.args.get('type') == 'presentation' %}selected{% endif %}>
+                                    <i class="fas fa-presentation"></i> Presentation
+                                </option>
+                                <option value="link" {% if request.args.get('type') == 'link' %}selected{% endif %}>
+                                    <i class="fas fa-link"></i> Link
+                                </option>
                             </select>
                         </div>
                     </div>
                     <div class="col-md-2">
                         <div class="form-group">
                             <label>&nbsp;</label>
-                            <div>
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-search"></i> Search
+                            <div class="btn-group w-100" role="group">
+                                <button type="submit" class="btn btn-primary flex-fill">
+                                    <i class="fas fa-search mr-2"></i> Search
                                 </button>
-                                <a href="{{ url_for('content.browse') }}" class="btn btn-secondary">Clear</a>
+                                <a href="{{ url_for('content.browse') }}" class="btn btn-secondary flex-fill">
+                                    <i class="fas fa-times mr-2"></i> Clear
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -114,9 +337,23 @@
 
     <!-- Results Count -->
     {% if request.args.get('q') or request.args.get('category') or request.args.get('difficulty') or request.args.get('type') %}
-    <div class="alert alert-info">
-        <strong>{{ total_count }}</strong> results found for your search criteria.
-        <a href="{{ url_for('content.browse') }}" class="float-right">Clear filters</a>
+    <div class="alert alert-info shadow-sm" style="border-radius: 10px; border-left: 4px solid #667eea;">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <i class="fas fa-filter mr-2"></i>
+                <strong>{{ total_count }}</strong> results found for your search criteria.
+                {% for filter_name, filter_value in [('q', request.args.get('q')), ('category', request.args.get('category')), ('difficulty', request.args.get('difficulty')), ('type', request.args.get('type'))] %}
+                    {% if filter_value %}
+                        <span class="filter-badge ml-2">
+                            {{ filter_name }}: {{ filter_value[:20] + ('...' if filter_value|length > 20 else '') }}
+                        </span>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            <a href="{{ url_for('content.browse') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-times mr-1"></i> Clear all
+            </a>
+        </div>
     </div>
     {% endif %}
 
