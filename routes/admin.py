@@ -382,26 +382,79 @@ def toggle_content(content_id):
         return redirect(url_for('admin.content'))
     
     try:
-        # Get current status
-        cursor.execute("SELECT is_published FROM content WHERE id = ?", (content_id,))
+        cursor = connection.cursor()
+        
+        # Get content details and current status
+        cursor.execute("""
+            SELECT is_published, title, uploaded_by 
+            FROM content 
+            WHERE id = ?
+        """, (content_id,))
         content = cursor.fetchone()
         
         if content:
             new_status = not content[0]
+            old_status = content[0]
+            
+            # Update content status
             cursor.execute(
                 "UPDATE content SET is_published = ?, updated_at = ? WHERE id = ?",
                 (new_status, datetime.now(), content_id)
             )
-            connection.commit()
             
-            action = 'published' if new_status else 'unpublished'
-            flash(f'Content {action} successfully', 'success')
+            # Send notification to content owner if status is changing from published to unpublished
+            if old_status and not new_status:  # Content is being hidden/unpublished
+                subject = "Content Hidden by Administrator"
+                message_content = f"""
+Dear Content Author,
+
+Your content "{content[1]}" has been temporarily hidden by an administrator.
+
+Reason: The content may not meet platform guidelines or requires review.
+
+Please review your content and ensure it complies with EduMate's content policies. 
+If you believe this action was taken in error, please contact the administration team.
+
+Content ID: {content_id}
+Title: {content[1]}
+Action taken on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+Thank you for your understanding.
+
+Best regards,
+EduMate Administration Team
+                """.strip()
+                
+                # Send system message to content owner
+                try:
+                    # Use admin user (ID=1) as sender for system messages
+                    cursor.execute("""
+                        INSERT INTO messages 
+                        (sender_id, receiver_id, subject, content, message_type, 
+                         related_content_id, sent_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (1, content[2], subject, message_content, 'feedback', 
+                          content_id, datetime.now()))
+                    
+                    connection.commit()
+                    flash(f'Content unpublished and notification sent to author successfully', 'success')
+                except Exception as notification_err:
+                    print(f"Failed to send notification: {notification_err}")
+                    flash(f'Content unpublished but failed to send notification to author', 'warning')
+            else:
+                action = 'published' if new_status else 'unpublished'
+                flash(f'Content {action} successfully', 'success')
+            
+            connection.commit()
         
         cursor.close()
         connection.close()
         
     except Exception as err:
+        connection.rollback()
         flash(f'Error updating content: {err}', 'error')
+        if 'connection' in locals() and connection:
+            connection.close()
     
     return redirect(url_for('admin.content'))
 

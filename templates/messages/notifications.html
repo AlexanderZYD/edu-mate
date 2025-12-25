@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block title %}Notification Settings - EduMate{% endblock %}
+
+{% block extra_css %}
+<style>
+.notification-card {
+    border-left: 4px solid #0d6efd;
+    transition: all 0.3s ease;
+}
+.notification-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.notification-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+.toggle-switch {
+    position: relative;
+    width: 60px;
+    height: 30px;
+    background-color: #ccc;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+.toggle-switch.active {
+    background-color: #0d6efd;
+}
+.toggle-switch::after {
+    content: '';
+    position: absolute;
+    width: 26px;
+    height: 26px;
+    background-color: white;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.3s;
+}
+.toggle-switch.active::after {
+    transform: translateX(30px);
+}
+.setting-description {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="mb-4">
+                <h2>
+                    <i class="fas fa-bell"></i> Notification Settings
+                </h2>
+                <p class="text-muted">Manage how you receive notifications and updates from EduMate.</p>
+            </div>
+
+            <form method="POST" id="notificationForm">
+                {% for notification in notifications %}
+                <div class="card notification-card mb-3">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                {% if notification.notification_type == 'new_message' %}
+                                <div class="notification-icon bg-primary text-white">
+                                    <i class="fas fa-envelope"></i>
+                                </div>
+                                {% elif notification.notification_type == 'message_reply' %}
+                                <div class="notification-icon bg-success text-white">
+                                    <i class="fas fa-reply"></i>
+                                </div>
+                                {% elif notification.notification_type == 'system_announcement' %}
+                                <div class="notification-icon bg-warning text-white">
+                                    <i class="fas fa-bullhorn"></i>
+                                </div>
+                                {% elif notification.notification_type == 'content_feedback' %}
+                                <div class="notification-icon bg-info text-white">
+                                    <i class="fas fa-star"></i>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col">
+                                <h5 class="mb-1">
+                                    {% if notification.notification_type == 'new_message' %}
+                                        New Messages
+                                    {% elif notification.notification_type == 'message_reply' %}
+                                        Message Replies
+                                    {% elif notification.notification_type == 'system_announcement' %}
+                                        System Announcements
+                                    {% elif notification.notification_type == 'content_feedback' %}
+                                        Content Feedback
+                                    {% endif %}
+                                </h5>
+                                <div class="setting-description">
+                                    {% if notification.notification_type == 'new_message' %}
+                                        Get notified when you receive new messages from other users.
+                                    {% elif notification.notification_type == 'message_reply' %}
+                                        Get notified when someone replies to your messages.
+                                    {% elif notification.notification_type == 'system_announcement' %}
+                                        Receive important system updates and announcements from administrators.
+                                    {% elif notification.notification_type == 'content_feedback' %}
+                                        Get notified when users provide feedback on your uploaded content.
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" 
+                                           id="{{ notification.notification_type }}_enabled"
+                                           name="{{ notification.notification_type }}_enabled" 
+                                           {% if notification.is_enabled %}checked{% endif %}>
+                                    <label class="form-check-label" for="{{ notification.notification_type }}_enabled">
+                                        <small>Browser Notifications</small>
+                                    </label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" 
+                                           id="{{ notification.notification_type }}_email"
+                                           name="{{ notification.notification_type }}_email" 
+                                           {% if notification.email_enabled %}checked{% endif %}>
+                                    <label class="form-check-label" for="{{ notification.notification_type }}_email">
+                                        <small>Email Notifications</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+
+                <!-- Additional Settings -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-cog"></i> Additional Settings
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="notification_frequency" class="form-label">Email Digest Frequency</label>
+                                    <select class="form-select" id="notification_frequency" name="notification_frequency">
+                                        <option value="immediate">Immediate</option>
+                                        <option value="daily">Daily Digest</option>
+                                        <option value="weekly">Weekly Digest</option>
+                                        <option value="never">Never</option>
+                                    </select>
+                                    <div class="form-text">
+                                        How often you receive email summaries of notifications.
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="quiet_hours" class="form-label">Quiet Hours</label>
+                                    <select class="form-select" id="quiet_hours" name="quiet_hours">
+                                        <option value="none">No quiet hours</option>
+                                        <option value="evening">Evenings (6 PM - 8 AM)</option>
+                                        <option value="night">Night (10 PM - 7 AM)</option>
+                                        <option value="weekend">Weekends only</option>
+                                    </select>
+                                    <div class="form-text">
+                                        Suppress notifications during specific times.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{{ url_for('messages.inbox') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Messages
+                    </a>
+                    <div>
+                        <button type="button" class="btn btn-outline-secondary me-2" id="resetBtn">
+                            <i class="fas fa-undo"></i> Reset to Default
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Settings
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Enable browser notifications (with permission)
+function requestNotificationPermission() {
+    if ('Notification' in browser) {
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+                showNotification('Browser notifications enabled!', 'success');
+            } else if (permission === 'denied') {
+                showNotification('Browser notifications are blocked. Please enable them in your browser settings.', 'warning');
+            }
+        });
+    }
+}
+
+// Check notification permission status
+function checkNotificationPermission() {
+    if ('Notification' in browser) {
+        if (Notification.permission === 'default') {
+            // Show a prompt to enable notifications
+            const enableBtn = document.createElement('button');
+            enableBtn.className = 'btn btn-sm btn-outline-info mb-3';
+            enableBtn.innerHTML = '<i class="fas fa-bell"></i> Enable Browser Notifications';
+            enableBtn.onclick = requestNotificationPermission;
+            
+            const form = document.getElementById('notificationForm');
+            form.parentNode.insertBefore(enableBtn, form);
+        }
+    }
+}
+
+// Reset to default settings
+document.getElementById('resetBtn').addEventListener('click', function() {
+    if (confirm('Are you sure you want to reset all notification settings to default?')) {
+        // Reset all checkboxes to checked (default enabled)
+        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            if (checkbox.id.includes('_enabled')) {
+                checkbox.checked = true;
+            } else {
+                checkbox.checked = false; // Email notifications off by default
+            }
+        });
+        
+        // Reset selects to default
+        document.getElementById('notification_frequency').value = 'immediate';
+        document.getElementById('quiet_hours').value = 'none';
+        
+        showNotification('Settings reset to default values', 'info');
+    }
+});
+
+// Form submission
+document.getElementById('notificationForm').addEventListener('submit', function(e) {
+    const submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    
+    // Add a small delay to show the loading state
+    setTimeout(() => {
+        this.submit();
+    }, 500);
+});
+
+// Interactive toggle switches enhancement
+document.querySelectorAll('.form-check-input').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        const card = this.closest('.notification-card');
+        const icon = card.querySelector('.notification-icon');
+        
+        if (this.id.includes('_enabled')) {
+            if (this.checked) {
+                icon.style.opacity = '1';
+                card.style.borderLeftColor = '#0d6efd';
+            } else {
+                icon.style.opacity = '0.5';
+                card.style.borderLeftColor = '#6c757d';
+            }
+        }
+        
+        // Show immediate feedback
+        const settingName = this.id.replace(/_enabled$/, '').replace(/_email$/, '');
+        const settingType = this.id.includes('_email') ? 'Email' : 'Browser';
+        
+        showNotification(
+            `${settingType} notifications for ${settingName.replace('_', ' ')} ${this.checked ? 'enabled' : 'disabled'}`, 
+            'info'
+        );
+    });
+});
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    checkNotificationPermission();
+    
+    // Set initial states for toggle switches
+    document.querySelectorAll('.form-check-input').forEach(checkbox => {
+        const event = new Event('change');
+        checkbox.dispatchEvent(event);
+    });
+});
+
+// Browser notification test (for demonstration)
+function testBrowserNotification() {
+    if ('Notification' in browser && Notification.permission === 'granted') {
+        new Notification('EduMate Test', {
+            body: 'This is a test notification from EduMate!',
+            icon: '/static/favicon.ico',
+            badge: '/static/favicon.ico'
+        });
+    }
+}
+</script>
+{% endblock %}

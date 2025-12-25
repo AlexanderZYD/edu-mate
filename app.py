@@ -115,6 +115,35 @@ from routes.user import user_bp
 from routes.content import content_bp
 from routes.recommendation import recommendation_bp
 from routes.admin import admin_bp
+from routes.messages import messages_bp
+
+def get_unread_message_count(user_id):
+    """Get unread message count for user"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return 0
+        
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT COUNT(*) as count 
+            FROM messages 
+            WHERE receiver_id = ? AND is_read = FALSE AND is_deleted_by_receiver = FALSE
+        """, (user_id,))
+        result = cursor.fetchone()
+        connection.close()
+        return result['count'] if result else 0
+    except Exception as err:
+        app.logger.error(f"Error getting unread count: {err}")
+        return 0
+
+# Make this function available in templates
+@app.context_processor
+def inject_unread_count():
+    """Inject unread message count into all templates"""
+    if 'user_id' in session:
+        return {'unread_count': get_unread_message_count(session['user_id'])}
+    return {'unread_count': 0}
 
 # Add custom static route for uploads
 @app.route('/uploads/<filename>')
@@ -130,6 +159,7 @@ app.register_blueprint(user_bp, url_prefix='/user')
 app.register_blueprint(content_bp, url_prefix='/content')
 app.register_blueprint(recommendation_bp, url_prefix='/recommend')
 app.register_blueprint(admin_bp, url_prefix='/admin')
+app.register_blueprint(messages_bp)  # Messages blueprint uses its own url_prefix
 
 @app.route('/')
 def index():
