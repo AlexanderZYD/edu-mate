@@ -384,6 +384,96 @@ def notification_settings():
     finally:
         connection.close()
 
+@messages_bp.route('/check-publication-request/<int:content_id>', methods=['GET'])
+@login_required
+def check_publication_request(content_id):
+    """Check if a publication request already exists for this content"""
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'exists': False, 'error': 'Database connection error'})
+    
+    try:
+        cursor = connection.cursor()
+        
+        cursor.execute("""
+            SELECT COUNT(*) as count
+            FROM messages
+            WHERE sender_id = ? 
+              AND receiver_id = 1
+              AND related_content_id = ?
+              AND subject LIKE ?
+              AND is_deleted_by_sender = FALSE
+              AND is_deleted_by_receiver = FALSE
+        """, (session['user_id'], content_id, '%Publication Request%'))
+        
+        result = cursor.fetchone()
+        exists = result['count'] > 0
+        
+        return jsonify({'exists': exists})
+    
+    except Exception as err:
+        return jsonify({'exists': False, 'error': str(err)})
+    
+    finally:
+        connection.close()
+
+@messages_bp.route('/send', methods=['POST'])
+@login_required
+def send_message():
+    """Send a message (AJAX endpoint)"""
+    try:
+        data = request.get_json()
+        receiver_id = data.get('receiver_id')
+        subject = data.get('subject', '').strip()
+        content = data.get('content', '').strip()
+        related_content_id = data.get('related_content_id')
+        
+        # Validation
+        if not receiver_id or not subject or not content:
+            return jsonify({'success': False, 'error': 'All fields are required'}), 400
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Database connection error'})
+        
+        cursor = connection.cursor()
+        
+        # Check if this is a publication request and if one already exists for this content
+        if 'Publication Request' in subject and related_content_id:
+            cursor.execute("""
+                SELECT COUNT(*) as count
+                FROM messages
+                WHERE sender_id = ? 
+                  AND receiver_id = ? 
+                  AND related_content_id = ?
+                  AND subject LIKE ?
+                  AND is_deleted_by_sender = FALSE
+                  AND is_deleted_by_receiver = FALSE
+            """, (session['user_id'], receiver_id, related_content_id, f'%Publication Request%'))
+            
+            existing_request = cursor.fetchone()
+            if existing_request and existing_request['count'] > 0:
+                connection.close()
+                return jsonify({
+                    'success': False, 
+                    'error': 'You have already sent a publication request for this content. Please wait for admin review.'
+                }), 400
+        
+        # Insert message
+        cursor.execute("""
+            INSERT INTO messages 
+            (sender_id, receiver_id, subject, content, message_type, related_content_id, sent_at)
+            VALUES (?, ?, ?, ?, 'personal', ?, ?)
+        """, (session['user_id'], receiver_id, subject, content, related_content_id, datetime.now()))
+        
+        connection.commit()
+        connection.close()
+        
+        return jsonify({'success': True, 'message': 'Message sent successfully'})
+    
+    except Exception as err:
+        return jsonify({'success': False, 'error': str(err)}), 500
+
 @messages_bp.route('/notifications', methods=['POST'])
 @login_required
 def update_notification_settings():

@@ -7,8 +7,18 @@ from datetime import datetime
 import os
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
+from functools import wraps
 
 load_dotenv()
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Please log in to access this page.', 'warning')
+            return redirect(url_for('auth.login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 def allowed_file(filename, content_type):
     """Check if file is allowed for content type"""
@@ -221,6 +231,45 @@ def browse():
         flash(f'Error loading content: {err}', 'error')
         return redirect(url_for('dashboard'))
 
+@content_bp.route('/my-content')
+@login_required
+def my_content():
+    """Display content uploaded by current user"""
+    if session.get('user_role') not in ['instructor', 'admin']:
+        flash('Only instructors and admins can access this page', 'error')
+        return redirect(url_for('content.browse'))
+    
+    connection = get_db_connection()
+    if not connection:
+        return render_template('content/my_content.html', content_list=[])
+    
+    try:
+        cursor = connection.cursor()
+        
+        # Get content uploaded by current user
+        cursor.execute("""
+            SELECT 
+                c.*,
+                cat.name as category_name,
+                (SELECT COUNT(*) FROM content_feedback cf WHERE cf.content_id = c.id) as feedback_count,
+                (SELECT AVG(rating) FROM content_feedback cf WHERE cf.content_id = c.id AND rating IS NOT NULL) as avg_rating
+            FROM content c
+            LEFT JOIN categories cat ON c.category_id = cat.id
+            WHERE c.uploaded_by = ?
+            ORDER BY c.created_at DESC
+        """, (session['user_id'],))
+        
+        content_list = cursor.fetchall()
+        
+        return render_template('content/my_content.html', content_list=content_list)
+    
+    except Exception as err:
+        flash(f'Error loading your content: {err}', 'error')
+        return render_template('content/my_content.html', content_list=[])
+    
+    finally:
+        connection.close()
+
 @content_bp.route('/upload', methods=['GET', 'POST'])
 def upload():
     """Upload new content"""
@@ -258,7 +307,12 @@ def upload():
             tags = request.form.getlist('tags')
             external_link = request.form.get('external_link')
             source_type = request.form.get('source_type')
-            publish_now = request.form.get('publish_now') is not None
+            # Check if user wants to publish and has permission
+            user_role = session.get('user_role', 'student')
+            wants_publish = request.form.get('publish_now') is not None
+            
+            # Only admins can publish immediately, instructors need approval
+            publish_now = wants_publish and user_role == 'admin'
             
             # Validation
             if not all([title, content_type, difficulty]):
@@ -479,8 +533,8 @@ def view(content_id):
                 FROM content c
                 LEFT JOIN categories cat ON c.category_id = cat.id
                 LEFT JOIN users u ON c.uploaded_by = u.id
-                WHERE c.id = ? AND c.is_published = 1
-            """, (content_id,))
+                WHERE c.id = ? AND (c.is_published = 1 OR c.uploaded_by = ?)
+            """, (content_id, session['user_id']))
         
         content = cursor.fetchone()
         
@@ -764,16 +818,17 @@ def record_activity(content_id):
                 # No in_progress record found, just insert completed
                 pass
         
-        # Check if content exists - admins can access all content, others only published content
+        # Check if content exists - admins can access all content, content owners can see their own unpublished content
         if session.get('user_role') == 'admin':
             content = connection.execute(
                 "SELECT id FROM content WHERE id = ?",
                 (content_id,)
             ).fetchone()
         else:
+            # Regular users can see published content OR their own unpublished content
             content = connection.execute(
-                "SELECT id FROM content WHERE id = ? AND is_published = 1",
-                (content_id,)
+                "SELECT id FROM content WHERE id = ? AND (is_published = 1 OR uploaded_by = ?)",
+                (content_id, session['user_id'])
             ).fetchone()
         
         if not content:
@@ -816,9 +871,10 @@ def toggle_bookmark(content_id):
                 (content_id,)
             ).fetchone()
         else:
+            # Regular users can see published content OR their own unpublished content
             content = connection.execute(
-                "SELECT id FROM content WHERE id = ? AND is_published = 1",
-                (content_id,)
+                "SELECT id FROM content WHERE id = ? AND (is_published = 1 OR uploaded_by = ?)",
+                (content_id, session['user_id'])
             ).fetchone()
         
         if not content:
@@ -1012,7 +1068,12 @@ def edit(content_id):
             tags = request.form.get('tags')
             external_link = request.form.get('external_link')
             source_type = request.form.get('source_type')
-            publish_now = request.form.get('publish_now') is not None
+            # Check if user wants to publish and has permission
+            user_role = session.get('user_role', 'student')
+            wants_publish = request.form.get('publish_now') is not None
+            
+            # Only admins can publish immediately, instructors need approval
+            publish_now = wants_publish and user_role == 'admin'
             
             # Validation
             if not title:
@@ -1100,15 +1161,16 @@ def edit(content_id):
 def delete_content(content_id):
     """Delete content"""
     if 'user_id' not in session:
+        if request.headers.get('Content-Type') == 'application/json':
+            return jsonify({'success': False, 'error': 'Not logged in'})
         return redirect(url_for('auth.login'))
-    
-    if session.get('user_role') not in ['admin']:
-        flash('Only administrators can delete content', 'error')
-        return redirect(url_for('content.view', content_id=content_id))
     
     connection = get_db_connection()
     if not connection:
-        flash('Database error', 'error')
+        error_msg = 'Database error'
+        if request.headers.get('Content-Type') == 'application/json':
+            return jsonify({'success': False, 'error': error_msg})
+        flash(error_msg, 'error')
         return redirect(url_for('content.view', content_id=content_id))
     
     try:
@@ -1119,12 +1181,19 @@ def delete_content(content_id):
         content = cursor.fetchone()
         
         if not content:
-            flash('Content not found', 'error')
+            error_msg = 'Content not found'
+            if request.headers.get('Content-Type') == 'application/json':
+                return jsonify({'success': False, 'error': error_msg})
+            flash(error_msg, 'error')
             return redirect(url_for('content.browse'))
         
         # Check if user has permission to delete this content
-        if session.get('user_role') != 'admin' and content['uploaded_by'] != session['user_id']:
-            flash('You do not have permission to delete this content', 'error')
+        user_role = session.get('user_role')
+        if user_role != 'admin' and content['uploaded_by'] != session['user_id']:
+            error_msg = 'You do not have permission to delete this content'
+            if request.headers.get('Content-Type') == 'application/json':
+                return jsonify({'success': False, 'error': error_msg})
+            flash(error_msg, 'error')
             return redirect(url_for('content.view', content_id=content_id))
         
         # Delete related feedback
@@ -1148,11 +1217,186 @@ def delete_content(content_id):
         cursor.close()
         connection.close()
         
-        flash(f'Content "{content["title"]}" has been deleted successfully!', 'success')
+        success_msg = f'Content "{content["title"]}" has been deleted successfully!'
+        if request.headers.get('Content-Type') == 'application/json':
+            return jsonify({'success': True, 'message': success_msg})
+        
+        flash(success_msg, 'success')
         return redirect(url_for('content.browse'))
         
     except Exception as err:
-        flash(f'Error deleting content: {err}', 'error')
+        error_msg = f'Error deleting content: {err}'
+        if request.headers.get('Content-Type') == 'application/json':
+            return jsonify({'success': False, 'error': str(err)})
+        flash(error_msg, 'error')
+        return redirect(url_for('content.view', content_id=content_id))
+
+@content_bp.route('/<int:content_id>/unpublish', methods=['POST'])
+def unpublish_content(content_id):
+    """Unpublish content"""
+    if 'user_id' not in session:
+        if request.headers.get('Content-Type') == 'application/json':
+            return jsonify({'success': False, 'error': 'Not logged in'})
+        return redirect(url_for('auth.login'))
+    
+    connection = get_db_connection()
+    if not connection:
+        error_msg = 'Database error'
+        if request.headers.get('Content-Type') == 'application/json':
+            return jsonify({'success': False, 'error': error_msg})
+        flash(error_msg, 'error')
+        return redirect(url_for('content.view', content_id=content_id))
+    
+    try:
+        cursor = connection.cursor()
+        
+        # Get content details for logging and validation
+        cursor.execute("SELECT title, uploaded_by, is_published FROM content WHERE id = ?", (content_id,))
+        content = cursor.fetchone()
+        
+        if not content:
+            error_msg = 'Content not found'
+            if request.headers.get('Content-Type') == 'application/json':
+                return jsonify({'success': False, 'error': error_msg})
+            flash(error_msg, 'error')
+            return redirect(url_for('content.browse'))
+        
+        # Check if user has permission to unpublish this content
+        user_role = session.get('user_role')
+        if user_role != 'admin' and content['uploaded_by'] != session['user_id']:
+            error_msg = 'You do not have permission to unpublish this content'
+            if request.headers.get('Content-Type') == 'application/json':
+                return jsonify({'success': False, 'error': error_msg})
+            flash(error_msg, 'error')
+            return redirect(url_for('content.view', content_id=content_id))
+        
+        # Check if content is already unpublished
+        if not content['is_published']:
+            error_msg = 'Content is already unpublished'
+            if request.headers.get('Content-Type') == 'application/json':
+                return jsonify({'success': False, 'error': error_msg})
+            flash(error_msg, 'warning')
+            return redirect(url_for('content.view', content_id=content_id))
+        
+        # Update content to unpublish
+        cursor.execute("""
+            UPDATE content 
+            SET is_published = FALSE, updated_at = ?
+            WHERE id = ?
+        """, (datetime.now(), content_id))
+        
+        connection.commit()
+        
+        # Log the unpublish action
+        cursor.execute("""
+            INSERT INTO system_logs (user_id, action, resource_type, resource_id, created_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, (session['user_id'], 'UNPUBLISHED', 'content', content_id, datetime.now()))
+        connection.commit()
+        
+        cursor.close()
+        connection.close()
+        
+        success_msg = f'Content "{content["title"]}" has been unpublished successfully!'
+        if request.headers.get('Content-Type') == 'application/json':
+            return jsonify({'success': True, 'message': success_msg})
+        
+        flash(success_msg, 'success')
+        return redirect(url_for('content.my_content'))
+        
+    except Exception as err:
+        error_msg = f'Error unpublishing content: {err}'
+        if request.headers.get('Content-Type') == 'application/json':
+            return jsonify({'success': False, 'error': str(err)})
+        flash(error_msg, 'error')
+        return redirect(url_for('content.view', content_id=content_id))
+
+@content_bp.route('/<int:content_id>/publish', methods=['POST'])
+def publish_content(content_id):
+    """Direct publish content (admin only)"""
+    if 'user_id' not in session:
+        if request.headers.get('Content-Type') == 'application/json':
+            return jsonify({'success': False, 'error': 'Not logged in'})
+        return redirect(url_for('auth.login'))
+    
+    # Check if user is admin
+    user_role = session.get('user_role')
+    if user_role != 'admin':
+        error_msg = 'Only administrators can directly publish content'
+        if request.headers.get('Content-Type') == 'application/json':
+            return jsonify({'success': False, 'error': error_msg})
+        flash(error_msg, 'error')
+        return redirect(url_for('content.view', content_id=content_id))
+    
+    connection = get_db_connection()
+    if not connection:
+        error_msg = 'Database error'
+        if request.headers.get('Content-Type') == 'application/json':
+            return jsonify({'success': False, 'error': error_msg})
+        flash(error_msg, 'error')
+        return redirect(url_for('content.view', content_id=content_id))
+    
+    try:
+        cursor = connection.cursor()
+        
+        # Get content details for logging and validation
+        cursor.execute("SELECT title, uploaded_by, is_published FROM content WHERE id = ?", (content_id,))
+        content = cursor.fetchone()
+        
+        if not content:
+            error_msg = 'Content not found'
+            if request.headers.get('Content-Type') == 'application/json':
+                return jsonify({'success': False, 'error': error_msg})
+            flash(error_msg, 'error')
+            return redirect(url_for('content.browse'))
+        
+        # Check if user has permission to publish this content (admin or content owner)
+        if user_role != 'admin' and content['uploaded_by'] != session['user_id']:
+            error_msg = 'You do not have permission to publish this content'
+            if request.headers.get('Content-Type') == 'application/json':
+                return jsonify({'success': False, 'error': error_msg})
+            flash(error_msg, 'error')
+            return redirect(url_for('content.view', content_id=content_id))
+        
+        # Check if content is already published
+        if content['is_published']:
+            error_msg = 'Content is already published'
+            if request.headers.get('Content-Type') == 'application/json':
+                return jsonify({'success': False, 'error': error_msg})
+            flash(error_msg, 'warning')
+            return redirect(url_for('content.view', content_id=content_id))
+        
+        # Update content to publish
+        cursor.execute("""
+            UPDATE content 
+            SET is_published = TRUE, updated_at = ?
+            WHERE id = ?
+        """, (datetime.now(), content_id))
+        
+        connection.commit()
+        
+        # Log the publish action
+        cursor.execute("""
+            INSERT INTO system_logs (user_id, action, resource_type, resource_id, created_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, (session['user_id'], 'PUBLISHED', 'content', content_id, datetime.now()))
+        connection.commit()
+        
+        cursor.close()
+        connection.close()
+        
+        success_msg = f'Content "{content["title"]}" has been published successfully!'
+        if request.headers.get('Content-Type') == 'application/json':
+            return jsonify({'success': True, 'message': success_msg})
+        
+        flash(success_msg, 'success')
+        return redirect(url_for('content.my_content'))
+        
+    except Exception as err:
+        error_msg = f'Error publishing content: {err}'
+        if request.headers.get('Content-Type') == 'application/json':
+            return jsonify({'success': False, 'error': str(err)})
+        flash(error_msg, 'error')
         return redirect(url_for('content.view', content_id=content_id))
 
 @content_bp.route('/api/search')

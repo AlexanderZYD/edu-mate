@@ -413,7 +413,14 @@ Your content "{content[1]}" has been temporarily hidden by an administrator.
 Reason: The content may not meet platform guidelines or requires review.
 
 Please review your content and ensure it complies with EduMate's content policies. 
-If you believe this action was taken in error, please contact the administration team.
+You can view and edit your content from your "My Content" page.
+
+📝 Quick Actions:
+• View Content: /content/{content_id}
+• Edit Content: /content/{content_id}/edit
+• My Content: /content/my-content
+
+If you believe this action was taken in error, please contact the administration team or use the "Request Publish" button to request republication.
 
 Content ID: {content_id}
 Title: {content[1]}

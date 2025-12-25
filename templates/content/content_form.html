@@ -1216,6 +1216,7 @@
                                     Publishing Options
                                 </h5>
                                 
+                                {% if session.user_role == 'admin' %}
                                 <div class="row align-items-center">
                                     <div class="col-md-8">
                                         <div class="form-check form-switch">
@@ -1234,7 +1235,7 @@
                                                     Content is currently a draft. Check to publish now.
                                                 {% endif %}
                                             {% else %}
-                                                Uncheck to save as draft and publish later
+                                                Content will be published immediately. Uncheck to save as draft.
                                             {% endif %}
                                         </small>
                                     </div>
@@ -1251,6 +1252,18 @@
                                         </div>
                                     </div>
                                 </div>
+                                {% else %}
+                                <!-- Instructor Publishing Notice -->
+                                <div class="alert alert-info border-0" role="alert">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-info-circle fa-2x me-3 text-primary"></i>
+                                        <div>
+                                            <h6 class="alert-heading mb-2">Review Required for Publishing</h6>
+                                            <p class="mb-0">Your content will be saved as a draft and submitted for admin review. Once approved by an administrator, it will be published to the platform.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
                             </div>
 
                             {% if is_edit %}
@@ -2082,7 +2095,7 @@ document.addEventListener('DOMContentLoaded', function() {
         linkInput.addEventListener('blur', handleLinkInput);
     }
     
-    // Publishing options handler
+    // Publishing options handler (admin only)
     const publishNow = document.getElementById('publish_now');
     if (publishNow) {
         publishNow.addEventListener('change', togglePublishingOptions);

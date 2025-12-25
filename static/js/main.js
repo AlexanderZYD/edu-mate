@@ -160,23 +160,44 @@ function ajaxRequest(url, options = {}) {
  * Show notification message
  */
 function showNotification(message, type = 'info') {
+    // Create or get notification container
+    let notificationContainer = document.getElementById('notification-container');
+    if (!notificationContainer) {
+        notificationContainer = document.createElement('div');
+        notificationContainer.id = 'notification-container';
+        notificationContainer.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+        `;
+        document.body.appendChild(notificationContainer);
+    }
+    
     const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show mb-2`;
+    alertDiv.style.cssText = `
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-radius: 8px;
+        animation: slideInRight 0.3s ease-out;
+    `;
     alertDiv.innerHTML = `
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
     
-    const container = document.querySelector('.container');
-    if (container) {
-        container.insertBefore(alertDiv, container.firstChild);
-        
-        // Auto-hide after 5 seconds
+    notificationContainer.appendChild(alertDiv);
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        alertDiv.style.animation = 'slideOutRight 0.3s ease-in';
         setTimeout(() => {
-            const bsAlert = new bootstrap.Alert(alertDiv);
-            bsAlert.close();
-        }, 5000);
-    }
+            if (alertDiv.parentNode) {
+                alertDiv.parentNode.removeChild(alertDiv);
+            }
+        }, 300);
+    }, 5000);
 }
 
 /**
@@ -506,7 +527,7 @@ function initializeMessageSystem() {
         });
     });
     
-    document.querySelectorAll('.delete-btn').forEach(btn => {
+    document.querySelectorAll('.delete-message-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const messageId = this.dataset.messageId;
             deleteMessage(messageId);

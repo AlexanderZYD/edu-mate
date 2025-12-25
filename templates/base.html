@@ -54,6 +54,9 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('content.upload') }}">Upload Content</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('content.my_content') }}">My Content</a>
+                    </li>
                     {% endif %}
                     
                     {% if session.user_role == 'admin' %}
