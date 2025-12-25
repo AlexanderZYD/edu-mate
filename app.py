@@ -109,17 +109,70 @@ def split_tags(value):
     
     return []
 
+@app.template_filter('tags_input')
+def tags_input(value):
+    """Convert tags to input field format (comma-separated string)"""
+    if not value:
+        return ''
+    
+    # If it's already a string, just clean it up
+    if isinstance(value, str):
+        if '[' in value and ']' in value:
+            # Remove brackets and quotes, then split by comma
+            clean_value = value.replace('[', '').replace(']', '').replace("'", '').replace('"', '')
+            tags = [tag.strip() for tag in clean_value.split(',') if tag.strip()]
+            return ', '.join(tags)
+        else:
+            # Already comma-separated, just ensure proper formatting
+            tags = [tag.strip() for tag in value.split(',') if tag.strip()]
+            return ', '.join(tags)
+    
+    # If it's a list, join with commas
+    if isinstance(value, list):
+        return ', '.join(str(tag).strip() for tag in value if str(tag).strip())
+    
+    return ''
+
 # Import route blueprints
 from routes.auth import auth_bp
 from routes.user import user_bp
 from routes.content import content_bp
 from routes.recommendation import recommendation_bp
 from routes.admin import admin_bp
+from routes.messages import messages_bp
+
+def get_unread_message_count(user_id):
+    """Get unread message count for user"""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return 0
+        
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT COUNT(*) as count 
+            FROM messages 
+            WHERE receiver_id = ? AND is_read = FALSE AND is_deleted_by_receiver = FALSE
+        """, (user_id,))
+        result = cursor.fetchone()
+        connection.close()
+        return result['count'] if result else 0
+    except Exception as err:
+        app.logger.error(f"Error getting unread count: {err}")
+        return 0
+
+# Make this function available in templates
+@app.context_processor
+def inject_unread_count():
+    """Inject unread message count into all templates"""
+    if 'user_id' in session:
+        return {'unread_count': get_unread_message_count(session['user_id'])}
+    return {'unread_count': 0}
 
 # Add custom static route for uploads
-@app.route('/uploads/<filename>')
+@app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
-    """Serve uploaded files"""
+    """Serve uploaded files from subdirectories"""
     from flask import send_from_directory
     upload_folder = os.path.join(os.path.dirname(__file__), 'uploads')
     return send_from_directory(upload_folder, filename)
@@ -130,6 +183,7 @@ app.register_blueprint(user_bp, url_prefix='/user')
 app.register_blueprint(content_bp, url_prefix='/content')
 app.register_blueprint(recommendation_bp, url_prefix='/recommend')
 app.register_blueprint(admin_bp, url_prefix='/admin')
+app.register_blueprint(messages_bp)  # Messages blueprint uses its own url_prefix
 
 @app.route('/')
 def index():
@@ -410,30 +464,22 @@ def dashboard():
             
             # 2. Completed - number of completed activities
             completed_count = connection.execute("""
-                SELECT COUNT(*) as count 
+                SELECT COUNT(DISTINCT ua.content_id) as count 
                 FROM user_activities ua 
                 WHERE ua.user_id = ? AND ua.activity_type = 'completed'
             """, (session['user_id'],)).fetchone()['count']
             
-            # 3. In Progress - content accessed but not completed
+            # 3. In Progress - content currently being studied
             in_progress_count = connection.execute("""
                 SELECT COUNT(DISTINCT ua.content_id) as count 
                 FROM user_activities ua 
-                WHERE ua.user_id = ? AND ua.activity_type != 'completed'
-            """, (session['user_id'],)).fetchone()['count']
-            
-            # 4. Achievements - count of positive ratings given or milestones
-            achievements_count = connection.execute("""
-                SELECT COUNT(*) as count 
-                FROM content_feedback cf 
-                WHERE cf.user_id = ? AND cf.rating >= 4
+                WHERE ua.user_id = ? AND ua.activity_type = 'in_progress'
             """, (session['user_id'],)).fetchone()['count']
             
             user_stats = {
                 'learning_progress': learning_progress,
                 'completed_count': completed_count,
-                'in_progress_count': in_progress_count,
-                'achievements_count': achievements_count
+                'in_progress_count': in_progress_count
             }
             
             # Get bookmarked content

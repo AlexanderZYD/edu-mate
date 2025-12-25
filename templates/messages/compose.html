@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}Compose Message - EduMate{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-label {
+    font-weight: 500;
+}
+.content-editor {
+    min-height: 300px;
+}
+.user-select-container {
+    max-height: 200px;
+    overflow-y: auto;
+}
+.user-option {
+    padding: 0.5rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.user-option:hover {
+    background-color: #f8f9fa;
+}
+.user-option.selected {
+    background-color: #e7f3ff;
+    border-color: #0d6efd;
+}
+.user-badge {
+    font-size: 0.875rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-pen"></i> Compose Message
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="composeForm">
+                        <div class="mb-3">
+                            <label for="receiverSelect" class="form-label">To:</label>
+                            <select class="form-select" id="receiverSelect" name="receiver_id" required>
+                                <option value="">Select a recipient...</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}" 
+                                        data-role="{{ user.role }}">
+                                    {{ user.full_name }} 
+                                    <span class="user-badge badge bg-secondary">{{ user.role.title() }}</span>
+                                    - {{ user.email }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="subject" class="form-label">Subject:</label>
+                            <input type="text" class="form-control" id="subject" name="subject" 
+                                   placeholder="Enter message subject..." required>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="content" class="form-label">Message:</label>
+                            <textarea class="form-control content-editor" id="content" name="content" 
+                                      placeholder="Type your message here..." required></textarea>
+                            <div class="form-text">
+                                <i class="fas fa-info-circle"></i> You can use plain text. Messages support up to 10,000 characters.
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('messages.inbox') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Messages
+                            </a>
+                            <div>
+                                <button type="button" class="btn btn-outline-secondary me-2" id="clearBtn">
+                                    <i class="fas fa-eraser"></i> Clear
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane"></i> Send Message
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Quick User Cards (Alternative selection method) -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-users"></i> Quick Select User
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row user-select-container">
+                        {% for user in users %}
+                        <div class="col-md-6 mb-2">
+                            <div class="user-option" data-user-id="{{ user.id }}" data-role="{{ user.role }}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ user.full_name }}</strong>
+                                        <div class="text-muted small">{{ user.email }}</div>
+                                    </div>
+                                    <span class="badge bg-{{ 'primary' if user.role == 'admin' else 'success' if user.role == 'instructor' else 'info' }}">
+                                        {{ user.role.title() }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Quick user selection
+document.querySelectorAll('.user-option').forEach(option => {
+    option.addEventListener('click', function() {
+        const userId = this.dataset.userId;
+        
+        // Update select dropdown
+        document.getElementById('receiverSelect').value = userId;
+        
+        // Update visual selection
+        document.querySelectorAll('.user-option').forEach(opt => {
+            opt.classList.remove('selected');
+        });
+        this.classList.add('selected');
+        
+        // Scroll to form
+        document.querySelector('.card').scrollIntoView({ behavior: 'smooth' });
+        
+        // Focus on subject field
+        document.getElementById('subject').focus();
+        
+        showNotification('Recipient selected: ' + this.querySelector('strong').textContent, 'info');
+    });
+});
+
+// Clear form
+document.getElementById('clearBtn').addEventListener('click', function() {
+    if (confirm('Are you sure you want to clear the entire message?')) {
+        document.getElementById('composeForm').reset();
+        document.querySelectorAll('.user-option').forEach(opt => {
+            opt.classList.remove('selected');
+        });
+        showNotification('Form cleared', 'info');
+    }
+});
+
+// Character counter
+const contentTextarea = document.getElementById('content');
+const maxLength = 10000;
+
+function updateCharCount() {
+    const remaining = maxLength - contentTextarea.value.length;
+    let countElement = document.getElementById('charCount');
+    
+    if (!countElement) {
+        countElement = document.createElement('div');
+        countElement.id = 'charCount';
+        countElement.className = 'form-text text-end';
+        contentTextarea.parentNode.appendChild(countElement);
+    }
+    
+    countElement.textContent = `${contentTextarea.value.length} / ${maxLength} characters`;
+    
+    if (remaining < 100) {
+        countElement.className = 'form-text text-end text-warning';
+    } else {
+        countElement.className = 'form-text text-end text-muted';
+    }
+}
+
+contentTextarea.addEventListener('input', updateCharCount);
+updateCharCount();
+
+// Form validation
+document.getElementById('composeForm').addEventListener('submit', function(e) {
+    const receiverId = document.getElementById('receiverSelect').value;
+    const subject = document.getElementById('subject').value.trim();
+    const content = document.getElementById('content').value.trim();
+    
+    if (!receiverId) {
+        e.preventDefault();
+        showNotification('Please select a recipient', 'error');
+        return;
+    }
+    
+    if (!subject) {
+        e.preventDefault();
+        showNotification('Please enter a subject', 'error');
+        return;
+    }
+    
+    if (!content) {
+        e.preventDefault();
+        showNotification('Please enter a message', 'error');
+        return;
+    }
+    
+    if (content.length > maxLength) {
+        e.preventDefault();
+        showNotification('Message is too long. Maximum ' + maxLength + ' characters allowed.', 'error');
+        return;
+    }
+    
+    // Disable submit button to prevent double submission
+    const submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+});
+</script>
+{% endblock %}

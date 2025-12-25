@@ -160,23 +160,44 @@ function ajaxRequest(url, options = {}) {
  * Show notification message
  */
 function showNotification(message, type = 'info') {
+    // Create or get notification container
+    let notificationContainer = document.getElementById('notification-container');
+    if (!notificationContainer) {
+        notificationContainer = document.createElement('div');
+        notificationContainer.id = 'notification-container';
+        notificationContainer.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+        `;
+        document.body.appendChild(notificationContainer);
+    }
+    
     const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show mb-2`;
+    alertDiv.style.cssText = `
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-radius: 8px;
+        animation: slideInRight 0.3s ease-out;
+    `;
     alertDiv.innerHTML = `
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
     
-    const container = document.querySelector('.container');
-    if (container) {
-        container.insertBefore(alertDiv, container.firstChild);
-        
-        // Auto-hide after 5 seconds
+    notificationContainer.appendChild(alertDiv);
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        alertDiv.style.animation = 'slideOutRight 0.3s ease-in';
         setTimeout(() => {
-            const bsAlert = new bootstrap.Alert(alertDiv);
-            bsAlert.close();
-        }, 5000);
-    }
+            if (alertDiv.parentNode) {
+                alertDiv.parentNode.removeChild(alertDiv);
+            }
+        }, 300);
+    }, 5000);
 }
 
 /**
@@ -369,6 +390,151 @@ document.querySelectorAll('.rating-input').forEach(ratingInput => {
     });
 });
 
+/**
+ * Message system functions
+ */
+
+/**
+ * Periodically check for new messages and update unread count
+ */
+function startMessagePolling() {
+    // Only poll if user is logged in
+    if (document.querySelector('a[href*="/messages"]')) {
+        setInterval(updateUnreadCount, 30000); // Check every 30 seconds
+    }
+}
+
+/**
+ * Update unread message count in navigation
+ */
+function updateUnreadCount() {
+    fetch('/messages/api/unread-count', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const unreadBadge = document.getElementById('unread-count');
+        if (unreadBadge) {
+            if (data.count > 0) {
+                unreadBadge.textContent = data.count;
+                unreadBadge.style.display = 'block';
+            } else {
+                unreadBadge.style.display = 'none';
+            }
+        }
+    })
+    .catch(error => {
+        // Silently fail - not critical
+        console.log('Failed to update unread count:', error);
+    });
+}
+
+/**
+ * Send message with real-time feedback
+ */
+function sendMessage(formData) {
+    return ajaxRequest('/messages/send', {
+        method: 'POST',
+        body: formData
+    })
+    .then(data => {
+        if (data.success) {
+            showNotification('Message sent successfully!', 'success');
+            return data;
+        } else {
+            throw new Error(data.error || 'Failed to send message');
+        }
+    });
+}
+
+/**
+ * Mark message as read with animation
+ */
+function markMessageAsRead(messageId) {
+    return ajaxRequest(`/messages/mark-read/${messageId}`, {
+        method: 'POST'
+    })
+    .then(data => {
+        if (data.success) {
+            // Update UI with animation
+            const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (messageElement) {
+                messageElement.classList.add('fade');
+                setTimeout(() => {
+                    messageElement.classList.remove('unread');
+                    messageElement.classList.remove('fade');
+                }, 300);
+            }
+            
+            // Update unread count
+            updateUnreadCount();
+            
+            return data;
+        } else {
+            throw new Error(data.error || 'Failed to mark message as read');
+        }
+    });
+}
+
+/**
+ * Delete message with confirmation
+ */
+function deleteMessage(messageId) {
+    if (!confirm('Are you sure you want to delete this message?')) {
+        return Promise.reject(new Error('User cancelled deletion'));
+    }
+    
+    return ajaxRequest(`/messages/delete/${messageId}`, {
+        method: 'POST'
+    })
+    .then(data => {
+        if (data.success) {
+            // Animate removal
+            const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (messageElement) {
+                messageElement.style.transition = 'opacity 0.3s, transform 0.3s';
+                messageElement.style.opacity = '0';
+                messageElement.style.transform = 'translateX(-20px)';
+                
+                setTimeout(() => {
+                    messageElement.remove();
+                    showNotification('Message deleted successfully', 'success');
+                }, 300);
+            }
+            
+            return data;
+        } else {
+            throw new Error(data.error || 'Failed to delete message');
+        }
+    });
+}
+
+/**
+ * Initialize message-related functionality
+ */
+function initializeMessageSystem() {
+    // Start polling for new messages
+    startMessagePolling();
+    
+    // Add click handlers for message actions
+    document.querySelectorAll('.mark-read-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const messageId = this.dataset.messageId;
+            markMessageAsRead(messageId);
+        });
+    });
+    
+    document.querySelectorAll('.delete-message-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const messageId = this.dataset.messageId;
+            deleteMessage(messageId);
+        });
+    });
+}
+
 // Export functions for global access
 window.EduMate = {
     ajaxRequest,
@@ -377,5 +543,15 @@ window.EduMate = {
     formatFileSize,
     rateContent,
     toggleBookmark,
-    searchContent
+    searchContent,
+    updateUnreadCount,
+    sendMessage,
+    markMessageAsRead,
+    deleteMessage,
+    initializeMessageSystem
 };
+
+// Initialize message system when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    initializeMessageSystem();
+});

@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}{{ message.subject }} - EduMate{% endblock %}
+
+{% block extra_css %}
+<style>
+.message-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 0.5rem;
+}
+.message-body {
+    line-height: 1.6;
+    font-size: 1.1rem;
+    white-space: pre-wrap;
+}
+.related-info {
+    background-color: #f8f9fa;
+    border-left: 4px solid #0d6efd;
+    padding: 1rem;
+    margin: 1rem 0;
+    border-radius: 0 0.25rem 0.25rem 0;
+}
+.metadata-item {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #e9ecef;
+}
+.metadata-item:last-child {
+    border-bottom: none;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Back Navigation -->
+            <div class="mb-3">
+                <a href="{{ url_for('messages.inbox') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Messages
+                </a>
+            </div>
+
+            <!-- Message Card -->
+            <div class="card shadow-sm">
+                <!-- Message Header -->
+                <div class="message-header">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h3 class="mb-2">{{ message.subject }}</h3>
+                            <div class="d-flex align-items-center">
+                                {% if message.sender_name %}
+                                <div class="me-3">
+                                    <i class="fas fa-user-circle fa-2x"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold">{{ message.sender_name }}</div>
+                                    <div class="opacity-75">{{ message.sender_email }}</div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            {% if message.message_type %}
+                            <span class="badge bg-white text-dark mb-2">{{ message.message_type.title() }}</span>
+                            {% endif %}
+                            <div class="small">
+                                <i class="fas fa-clock"></i> 
+                                {{ message.sent_at | format_datetime('%b %d, %Y at %I:%M %p') }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Message Body -->
+                <div class="card-body">
+                    <div class="message-body">
+                        {{ message.content }}
+                    </div>
+
+                    <!-- Related Content Information -->
+                    {% if message.content_title or message.related_user_id %}
+                    <div class="related-info">
+                        <h6><i class="fas fa-link"></i> Related Information</h6>
+                        {% if message.content_title %}
+                        <div class="metadata-item">
+                            <strong>Content:</strong> 
+                            <a href="{{ url_for('content.view', content_id=message.related_content_id) }}" 
+                               class="text-decoration-none">
+                                {{ message.content_title }}
+                            </a>
+                            
+                            {% if message.message_type == 'feedback' and message.related_content_id %}
+                            <!-- Quick Actions for Hidden Content -->
+                            <div class="mt-2">
+                                <small class="text-muted">Quick actions:</small>
+                                <div class="btn-group-sm" role="group">
+                                    <a href="{{ url_for('content.view', content_id=message.related_content_id) }}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                    <a href="{{ url_for('content.edit', content_id=message.related_content_id) }}" 
+                                       class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </a>
+                                    <a href="{{ url_for('content.my_content') }}" 
+                                       class="btn btn-sm btn-outline-info">
+                                        <i class="fas fa-list"></i> My Content
+                                    </a>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        {% if message.receiver_name and message.receiver_name != session.get('full_name') %}
+                        <div class="metadata-item">
+                            <strong>To:</strong> {{ message.receiver_name }} ({{ message.receiver_email }})
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Message Metadata -->
+                    <div class="mt-4 pt-3 border-top">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="metadata-item">
+                                    <i class="fas fa-user text-muted me-2"></i>
+                                    <strong>From:</strong> {{ message.sender_name }}
+                                </div>
+                                {% if message.priority %}
+                                <div class="metadata-item">
+                                    <i class="fas fa-exclamation-triangle text-muted me-2"></i>
+                                    <strong>Priority:</strong> 
+                                    <span class="badge bg-warning">Level {{ message.priority }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {% if message.read_at %}
+                                <div class="metadata-item">
+                                    <i class="fas fa-check-circle text-muted me-2"></i>
+                                    <strong>Read at:</strong> {{ message.read_at | format_datetime('%b %d, %Y at %I:%M %p') }}
+                                </div>
+                                {% endif %}
+                                {% if message.parent_message_id %}
+                                <div class="metadata-item">
+                                    <i class="fas fa-reply text-muted me-2"></i>
+                                    <strong>Reply to:</strong> Message #{{ message.parent_message_id }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="mt-4 d-flex justify-content-between">
+                        <div>
+                            {% if message.sender_id != session.user_id %}
+                            <a href="{{ url_for('messages.reply_message', message_id=message.id) }}" 
+                               class="btn btn-primary">
+                                <i class="fas fa-reply"></i> Reply
+                            </a>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <button class="btn btn-outline-danger delete-message-btn" data-message-id="{{ message.id }}">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reply Section (if it's a reply thread) -->
+            {% if message.parent_message_id %}
+            <div class="card mt-3 shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="fas fa-reply"></i> Original Message
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="text-muted">
+                        <em>This is a reply to a previous message. Click "View Original" to see the full conversation.</em>
+                    </div>
+                    <div class="mt-2">
+                        <a href="{{ url_for('messages.view_message', message_id=message.parent_message_id) }}" 
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye"></i> View Original
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Delete functionality
+document.querySelector('.delete-btn')?.addEventListener('click', function() {
+    const messageId = this.dataset.messageId;
+    
+    if (confirm('Are you sure you want to delete this message? This action cannot be undone.')) {
+        fetch(`/messages/delete/${messageId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Message deleted successfully', 'success');
+                setTimeout(() => {
+                    window.location.href = '{{ url_for("messages.inbox") }}';
+                }, 1000);
+            } else {
+                showNotification('Error deleting message: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error deleting message', 'error');
+        });
+    }
+});
+
+// Auto-refresh unread count periodically
+setInterval(() => {
+    fetch('/messages/api/unread-count')
+        .then(response => response.json())
+        .then(data => {
+            const unreadBadge = document.querySelector('#unread-count');
+            if (unreadBadge) {
+                unreadBadge.textContent = data.count;
+                if (data.count === 0) {
+                    unreadBadge.style.display = 'none';
+                }
+            }
+        })
+        .catch(error => {
+            // Silently fail - not critical
+        });
+}, 30000); // Check every 30 seconds
+</script>
+{% endblock %}

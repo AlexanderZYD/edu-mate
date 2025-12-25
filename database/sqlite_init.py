@@ -62,6 +62,7 @@ def create_sqlite_database():
             type TEXT NOT NULL CHECK (type IN ('pdf', 'video', 'link', 'document', 'presentation')),
             file_url VARCHAR(500) DEFAULT NULL,
             external_link VARCHAR(500) DEFAULT NULL,
+            cover_image VARCHAR(500) DEFAULT NULL,
             difficulty_level TEXT NOT NULL CHECK (difficulty_level IN ('beginner', 'intermediate', 'advanced')),
             tags TEXT DEFAULT NULL,
             uploaded_by INTEGER NOT NULL,
@@ -101,7 +102,7 @@ def create_sqlite_database():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             content_id INTEGER NOT NULL,
-            activity_type TEXT NOT NULL CHECK (activity_type IN ('viewed', 'downloaded', 'completed', 'bookmarked')),
+            activity_type TEXT NOT NULL CHECK (activity_type IN ('viewed', 'downloaded', 'completed', 'bookmarked', 'in_progress')),
             progress_percentage INTEGER DEFAULT 0,
             time_spent_minutes INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -204,6 +205,48 @@ def create_sqlite_database():
         )
     """)
     
+    # Create messages table for internal messaging system
+    cursor.execute("""
+        CREATE TABLE messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sender_id INTEGER NOT NULL,
+            receiver_id INTEGER NOT NULL,
+            subject VARCHAR(255) NOT NULL,
+            content TEXT NOT NULL,
+            message_type VARCHAR(20) DEFAULT 'personal' CHECK (message_type IN ('personal', 'system', 'announcement', 'feedback')),
+            priority INTEGER DEFAULT 1 CHECK (priority BETWEEN 1 AND 5),
+            is_read BOOLEAN DEFAULT FALSE,
+            is_deleted_by_sender BOOLEAN DEFAULT FALSE,
+            is_deleted_by_receiver BOOLEAN DEFAULT FALSE,
+            parent_message_id INTEGER NULL,
+            related_content_id INTEGER NULL,
+            related_user_id INTEGER NULL,
+            sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            read_at TIMESTAMP NULL,
+            FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (parent_message_id) REFERENCES messages(id) ON DELETE SET NULL,
+            FOREIGN KEY (related_content_id) REFERENCES content(id) ON DELETE SET NULL,
+            FOREIGN KEY (related_user_id) REFERENCES users(id) ON DELETE SET NULL
+        )
+    """)
+    
+    # Create message_notifications table for notification settings
+    cursor.execute("""
+        CREATE TABLE message_notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            notification_type VARCHAR(30) NOT NULL CHECK (notification_type IN ('new_message', 'message_reply', 'system_announcement', 'content_feedback')),
+            is_enabled BOOLEAN DEFAULT TRUE,
+            email_enabled BOOLEAN DEFAULT FALSE,
+            browser_push_enabled BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            UNIQUE (user_id, notification_type)
+        )
+    """)
+    
     # Insert default users
     from werkzeug.security import generate_password_hash
     
@@ -249,6 +292,27 @@ def create_sqlite_database():
     cursor.executemany("""
         INSERT INTO categories (name, description) VALUES (?, ?)
     """, categories)
+    
+    # Insert default message notification settings for all users
+    cursor.execute("""
+        INSERT INTO message_notifications (user_id, notification_type)
+        SELECT id, 'new_message' FROM users
+    """)
+    
+    cursor.execute("""
+        INSERT INTO message_notifications (user_id, notification_type)
+        SELECT id, 'message_reply' FROM users
+    """)
+    
+    cursor.execute("""
+        INSERT INTO message_notifications (user_id, notification_type)
+        SELECT id, 'system_announcement' FROM users
+    """)
+    
+    cursor.execute("""
+        INSERT INTO message_notifications (user_id, notification_type)
+        SELECT id, 'content_feedback' FROM users
+    """)
     
     # Commit changes and close connection
     conn.commit()
