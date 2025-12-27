@@ -1953,33 +1953,65 @@ function updateCurrentPreview(fileInfo, contentType) {
     dynamicPreview.innerHTML = previewHTML;
 }
 
-// Async file upload with real progress tracking
+// Optimized async file upload with enhanced progress tracking
 async function uploadFileAsync(file, content_type) {
     const progressBar = document.getElementById('upload_progress');
-    const formData = new FormData();
+    const fileName = document.getElementById('selected_file_name');
     
+    // Use the optimized uploader if available
+    if (window.optimizedUploader) {
+        return new Promise((resolve, reject) => {
+            window.optimizedUploader.handleFileUpload(
+                file,
+                // Progress callback
+                (progressData) => {
+                    progressBar.style.width = progressData.percent + '%';
+                    progressBar.textContent = `${Math.round(progressData.percent)}% - ${progressData.speed}`;
+                    fileName.textContent = `${file.name} (${progressData.speed})`;
+                },
+                // Success callback
+                (response) => {
+                    progressBar.className = 'progress-bar bg-success';
+                    progressBar.textContent = 'Upload Complete';
+                    fileName.textContent = file.name;
+                    resolve(response);
+                },
+                // Error callback
+                (error) => {
+                    progressBar.className = 'progress-bar bg-danger';
+                    progressBar.textContent = `Error: ${error.message}`;
+                    fileName.textContent = file.name;
+                    reject(error);
+                }
+            );
+        });
+    }
+    
+    // Fallback to original implementation if optimized uploader not available
+    const formData = new FormData();
     formData.append('file', file);
     formData.append('content_type', content_type);
     
     try {
-        // Create XMLHttpRequest for progress tracking
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             
-            // Track upload progress
+            // Enhanced progress tracking with speed calculation
+            const startTime = Date.now();
             xhr.upload.addEventListener('progress', function(e) {
                 if (e.lengthComputable) {
                     const percentComplete = (e.loaded / e.total) * 100;
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    const speed = elapsed > 0 ? (e.loaded / elapsed / 1024 / 1024).toFixed(2) + ' MB/s' : 'Calculating...';
+                    
                     progressBar.style.width = percentComplete + '%';
-                    progressBar.textContent = Math.round(percentComplete) + '%';
+                    progressBar.textContent = `${Math.round(percentComplete)}% - ${speed}`;
+                    fileName.textContent = `${file.name} (${speed})`;
                 }
             });
             
             // Handle completion
             xhr.addEventListener('load', function() {
-                console.log('Upload response status:', xhr.status);
-                console.log('Upload response text:', xhr.responseText);
-                
                 if (xhr.status === 200) {
                     try {
                         const response = JSON.parse(xhr.responseText);
@@ -2022,11 +2054,12 @@ async function uploadFileAsync(file, content_type) {
                 reject(new Error('Upload timeout'));
             });
             
-            // Configure and send request
+            // Configure and send request with optimized settings
             xhr.open('POST', '/content/upload-file');
             xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-            // Add timeout (5 minutes for large files)
-            xhr.timeout = 5 * 60 * 1000;
+            
+            // Increased timeout for large files (10 minutes)
+            xhr.timeout = 10 * 60 * 1000;
             xhr.send(formData);
         });
         
@@ -2366,13 +2399,20 @@ document.addEventListener('DOMContentLoaded', function() {
                         updateCurrentPreview(uploadedFileInfo, contentType);
                     }
                     
-                    // Update button text
+                    // Remove file from form input to prevent duplicate upload
+                    const fileInput = document.getElementById('file');
+                    if (fileInput) {
+                        fileInput.value = '';
+                        fileInput.removeAttribute('required');
+                    }
+                    
+                    // Update button text to indicate optimization
                     submitBtn.innerHTML = IS_EDIT_MODE ? 
-                        '<i class="fas fa-check me-2"></i>Ready to Update' : 
-                        '<i class="fas fa-check me-2"></i>Ready to Submit';
+                        '<i class="fas fa-rocket me-2"></i>Update (File Ready)' : 
+                        '<i class="fas fa-rocket me-2"></i>Submit (File Ready)';
                     submitBtn.disabled = false;
                     
-                    showNotification('File uploaded successfully! You can now submit the form.', 'success');
+                    showNotification('✅ File uploaded and ready! Form submission will be instant.', 'success');
                     
                 } catch (err) {
                     submitBtn.disabled = false;
@@ -2514,4 +2554,19 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<!-- Include optimized upload system -->
+<script src="{{ url_for('static', filename='js/upload-optimized.js') }}"></script>
+
+<script>
+// Initialize optimized uploader when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.optimizedUploader) {
+        console.log('Optimized uploader loaded successfully');
+    } else {
+        console.warn('Optimized uploader not available, using fallback');
+    }
+});
+</script>
+
 {% endblock %}

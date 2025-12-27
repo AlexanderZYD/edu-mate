@@ -452,14 +452,23 @@ def upload():
 
 @content_bp.route('/upload-file', methods=['POST'])
 def upload_file():
-    """Handle async file upload with progress tracking"""
+    """Handle async file upload with streaming to reduce memory usage"""
+    # Debug logging
+    current_app.logger.info(f"Upload endpoint accessed: {request.method} {request.url}")
+    current_app.logger.info(f"Headers: {dict(request.headers)}")
+    current_app.logger.info(f"Files: {list(request.files.keys())}")
+    current_app.logger.info(f"Form data: {list(request.form.keys())}")
+    
     if 'user_id' not in session:
+        current_app.logger.warning("Unauthorized upload attempt - no user_id in session")
         return jsonify({'error': 'Unauthorized'}), 401
     
     if session.get('user_role') not in ['instructor', 'admin']:
+        current_app.logger.warning(f"Permission denied - user role: {session.get('user_role')}")
         return jsonify({'error': 'Permission denied'}), 403
     
     if 'file' not in request.files:
+        current_app.logger.error("No file in request")
         return jsonify({'error': 'No file provided'}), 400
     
     file = request.files['file']
@@ -521,7 +530,17 @@ def upload_file():
         unique_filename = timestamp + filename
         
         file_path = os.path.join(upload_folder, unique_filename)
-        file.save(file_path)
+        
+        # Stream file to disk in chunks to reduce memory usage
+        chunk_size = 8192  # 8KB chunks
+        file_size = 0
+        with open(file_path, 'wb') as f:
+            while True:
+                chunk = file.stream.read(chunk_size)
+                if not chunk:
+                    break
+                f.write(chunk)
+                file_size += len(chunk)
         
         # Create URL for the file
         file_url = f'/uploads/{unique_filename}'
@@ -532,7 +551,7 @@ def upload_file():
             'file_url': file_url,
             'filename': unique_filename,
             'original_name': file.filename,
-            'size': os.path.getsize(file_path)
+            'size': file_size
         })
         
     except Exception as err:
