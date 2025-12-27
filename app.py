@@ -58,6 +58,8 @@ if app.config.get('DEBUG'):
     )
     app.logger.debug('Debug mode enabled')
 
+
+
 # Custom Jinja2 filters
 @app.template_filter('format_datetime')
 def format_datetime(value, format='%Y-%m-%d %H:%M'):
